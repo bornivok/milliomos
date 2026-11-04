@@ -1,0 +1,447 @@
+/* ==========================================================================
+   LEGYEN ÖN IS MILLIOMOS (WHO WANTS TO BE A MILLIONAIRE)
+   Letisztult, szögletes TV dizájn - Fényes hatású gradientek és árnyékok nélkül
+   ========================================================================== */
+
+.root {
+    -fx-base: #040814;
+    -fx-background: #040814;
+    -fx-control-inner-background: #081224;
+    -fx-font-family: "Segoe UI", "Arial", sans-serif;
+}
+
+/* ==========================================================================
+   FELSŐ MENÜSÁV - SZÖGLETES STÍLUS, BELSŐ VILÁGOSKÉK FÓKUSZKERET NÉLKÜL
+   ========================================================================== */
+.tab-pane {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.tab-pane .tab-header-area .tab-header-background {
+    -fx-background-color: #060e20;
+    -fx-border-color: #244878;
+    -fx-border-width: 0 0 2 0;
+}
+
+.tab {
+    -fx-background-color: #0b1836;
+    -fx-background-radius: 0;
+    -fx-background-insets: 0;
+    -fx-padding: 8 22;
+    -fx-border-color: #1a386b;
+    -fx-border-radius: 0;
+    -fx-border-width: 1 1 0 1;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.tab:hover {
+    -fx-background-color: #122550;
+    -fx-border-color: #3b6aa0;
+}
+
+.tab:selected {
+    -fx-background-color: #162f63;
+    -fx-background-insets: 0;
+    -fx-border-color: #f5af19 #f5af19 #162f63 #f5af19;
+    -fx-border-width: 2 2 0 2;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.tab:focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+/* Kiválasztott fül belső világoskék fókuszkeretének (focus-indicator) megszüntetése */
+.tab .focus-indicator,
+.tab:selected .focus-indicator,
+.tab:focused .focus-indicator,
+.tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator,
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .focus-indicator {
+    -fx-border-color: transparent !important;
+    -fx-border-width: 0 !important;
+    -fx-focus-color: transparent !important;
+    -fx-faint-focus-color: transparent !important;
+}
+
+.tab .tab-label {
+    -fx-text-fill: #e8f1fc;
+    -fx-font-weight: bold;
+    -fx-font-size: 13.5px;
+}
+
+.tab:selected .tab-label {
+    -fx-text-fill: #f5af19;
+}
+
+/* Felső menüsávban lévő szögletes némító gomb */
+.top-bar-mute-btn {
+    -fx-background-color: #0d1e40;
+    -fx-background-radius: 0;
+    -fx-border-color: #3b6aa0;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 0;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13.5px;
+    -fx-padding: 4 12;
+    -fx-cursor: hand;
+    -fx-effect: null;
+}
+
+.top-bar-mute-btn:hover {
+    -fx-background-color: #1a386b;
+    -fx-border-color: #f5af19;
+}
+
+/* ==========================================================================
+   STÚDIÓ KÁRTYÁK ÉS PANELEK - SZÖGLETES, FÉNYES GRADIENT NÉLKÜL
+   ========================================================================== */
+.glass-panel {
+    -fx-background-color: #071228;
+    -fx-background-radius: 0;
+    -fx-border-color: #244878;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 0;
+    -fx-effect: null;
+}
+
+/* ==========================================================================
+   SZÖGLETES KÉRDÉS- ÉS VÁLASZMEZŐK - MATT TV-SZÍNEK, FÉNYES GRADIENT NÉLKÜL
+   ========================================================================== */
+
+/* Valódi szögletes kérdésmező (Dinamikusan méreteződő magasság) */
+.question-banner {
+    -fx-shape: "M 0 50 L 2.7 0 L 97.3 0 L 100 50 L 97.3 100 L 2.7 100 Z";
+    -fx-background-color: #08142c;
+    -fx-background-radius: 0;
+    -fx-border-color: #3a78c4;
+    -fx-border-width: 2.2;
+    -fx-border-radius: 0;
+    -fx-padding: 12 38;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 16.5px;
+    -fx-font-weight: bold;
+    -fx-effect: null;
+}
+
+/* Valódi szögletes válaszgombok */
+.answer-button {
+    -fx-shape: "M 0 50 L 5.5 0 L 94.5 0 L 100 50 L 94.5 100 L 5.5 100 Z";
+    -fx-background-color: #08142c;
+    -fx-background-radius: 0;
+    -fx-border-color: #306cb4;
+    -fx-border-width: 2;
+    -fx-border-radius: 0;
+    -fx-padding: 6 28;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-effect: null;
+}
+
+/* Hover: Tiszta kék háttér, arany keret, fényes gradient nélkül */
+.answer-button:hover {
+    -fx-background-color: #102652;
+    -fx-border-color: #f5af19;
+    -fx-text-fill: #ffffff;
+    -fx-translate-y: 0;
+    -fx-effect: null;
+}
+
+/* Megjelölt válasz: Tiszta narancssárga, fényes gradient nélkül */
+.answer-selected {
+    -fx-background-color: #e67e00 !important;
+    -fx-border-color: #ffffff !important;
+    -fx-text-fill: #ffffff !important;
+    -fx-opacity: 1.0 !important;
+    -fx-effect: null !important;
+}
+
+/* Helyes válasz: Tiszta smaragdzöld, fényes gradient nélkül */
+.answer-correct {
+    -fx-background-color: #1b8a47 !important;
+    -fx-border-color: #ffffff !important;
+    -fx-text-fill: #ffffff !important;
+    -fx-opacity: 1.0 !important;
+    -fx-effect: null !important;
+}
+
+/* Helytelen válasz: Tiszta karmazsinpiros, fényes gradient nélkül */
+.answer-wrong {
+    -fx-background-color: #b82424 !important;
+    -fx-border-color: #ffffff !important;
+    -fx-text-fill: #ffffff !important;
+    -fx-opacity: 1.0 !important;
+    -fx-effect: null !important;
+}
+
+.answer-button:pressed {
+    -fx-translate-y: 1;
+}
+
+.answer-button:disabled {
+    -fx-opacity: 0.35;
+}
+
+/* Horizontális összekötő vonalak - Tiszta színátmenet nélkül */
+.tv-connector-line {
+    -fx-background-color: #306cb4;
+    -fx-opacity: 0.85;
+}
+
+/* ==========================================================================
+   SEGÍTSÉGEK (LIFELINES) - SZÖGLETES, FÉNYES GRADIENT NÉLKÜL
+   ========================================================================== */
+.lifeline-button {
+    -fx-background-color: #091836;
+    -fx-background-radius: 0;
+    -fx-border-color: #306cb4;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 0;
+    -fx-text-fill: #e8f4fd;
+    -fx-font-weight: bold;
+    -fx-font-size: 12.5px;
+    -fx-padding: 7 14;
+    -fx-cursor: hand;
+    -fx-effect: null;
+}
+
+.lifeline-button:hover {
+    -fx-background-color: #122752;
+    -fx-border-color: #f5af19;
+    -fx-text-fill: #ffffff;
+    -fx-effect: null;
+}
+
+.lifeline-button:disabled {
+    -fx-opacity: 0.40;
+    -fx-border-color: #1a2a44;
+}
+
+/* Megállás / Kiszállás gomb */
+.walk-away-button {
+    -fx-background-color: #3d2600;
+    -fx-border-color: #d48800;
+    -fx-text-fill: #ffeaa7;
+}
+
+.walk-away-button:hover {
+    -fx-background-color: #d48800;
+    -fx-border-color: #ffffff;
+    -fx-text-fill: #060c18;
+}
+
+/* ==========================================================================
+   15 LÉPCSŐS NYEREMÉNYFA - SZÖGLETES, TISZTA SZÍNEK
+   ========================================================================== */
+.prize-ladder {
+    -fx-background-color: #050c1c;
+    -fx-border-color: #244878;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 0;
+    -fx-background-radius: 0;
+    -fx-effect: null;
+}
+
+.ladder-step {
+    -fx-background-color: #091530;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-radius: 0;
+    -fx-border-width: 1;
+}
+
+.ladder-text {
+    -fx-text-fill: #e69d15;
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+}
+
+.ladder-step-milestone {
+    -fx-background-color: #13274f;
+    -fx-border-color: #3b6aa0;
+}
+
+.ladder-step-milestone .ladder-text {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 12px;
+}
+
+.ladder-step-passed {
+    -fx-background-color: #0d2818;
+    -fx-border-color: #1b8a47;
+}
+
+.ladder-step-passed .ladder-text {
+    -fx-text-fill: #2ecc71;
+}
+
+.ladder-step-current {
+    -fx-background-color: #ffb300;
+    -fx-border-color: #ffffff;
+    -fx-border-width: 1.5;
+    -fx-effect: null;
+}
+
+.ladder-step-current .ladder-text {
+    -fx-text-fill: #040814;
+    -fx-font-weight: bold;
+}
+
+/* ==========================================================================
+   KÖZÖNSÉG OSZLOPDIAGRAM
+   ========================================================================== */
+.audience-chart-pane {
+    -fx-background-color: #060f24;
+    -fx-border-color: #306cb4;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 0;
+    -fx-background-radius: 0;
+    -fx-effect: null;
+}
+
+.chart-bar-track {
+    -fx-background-color: #030814;
+    -fx-background-radius: 0;
+    -fx-border-color: #142a50;
+    -fx-border-radius: 0;
+    -fx-border-width: 1;
+}
+
+.chart-bar-fill {
+    -fx-background-color: #0077dd;
+    -fx-background-radius: 0;
+    -fx-border-color: #4da6ff;
+    -fx-border-width: 1 1 0 1;
+    -fx-border-radius: 0;
+    -fx-effect: null;
+}
+
+.chart-bar-highest {
+    -fx-background-color: #e67e00;
+    -fx-border-color: #ffffff;
+    -fx-effect: null;
+}
+
+.chart-pct-label {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+}
+
+.chart-axis-label {
+    -fx-text-fill: #f5af19;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* ==========================================================================
+   TÁBLÁZAT ÉS LISTA NÉZETEK
+   ========================================================================== */
+.table-view, .list-view {
+    -fx-background-color: #071024;
+    -fx-border-color: #244878;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 0;
+    -fx-background-radius: 0;
+    -fx-effect: null;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #0d1e3d;
+}
+
+.table-view .column-header {
+    -fx-background-color: transparent;
+    -fx-border-color: #1a386b;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: #f5af19;
+    -fx-font-weight: bold;
+}
+
+.table-row-cell, .list-cell {
+    -fx-background-color: #091736;
+    -fx-text-fill: #e0f0fc;
+}
+
+.table-row-cell:odd, .list-cell:odd {
+    -fx-background-color: #0c1e44;
+}
+
+.table-row-cell:selected, .list-cell:filled:selected {
+    -fx-background-color: #ffb300;
+    -fx-text-fill: #040814;
+    -fx-font-weight: bold;
+}
+
+/* ==========================================================================
+   FELUGRÓ EREDMÉNY ABLAK (STÚDIÓ DIALÓGUS)
+   ========================================================================== */
+.studio-dialog {
+    -fx-background-color: #071228;
+    -fx-border-color: #3a78c4;
+    -fx-border-width: 2;
+    -fx-border-radius: 0;
+    -fx-background-radius: 0;
+    -fx-padding: 18 24 18 24;
+    -fx-effect: null;
+}
+
+.studio-dialog > .content {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.studio-dialog > .button-bar > .container {
+    -fx-background-color: transparent;
+    -fx-padding: 16 0 4 0;
+    -fx-alignment: center;
+}
+
+.studio-dialog-title {
+    -fx-text-fill: #f5af19;
+    -fx-font-family: "Arial Black", "Segoe UI", sans-serif;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.studio-dialog-message {
+    -fx-text-fill: #e8f1fc;
+    -fx-font-size: 14.5px;
+    -fx-font-weight: bold;
+}
+
+.studio-stats-box {
+    -fx-background-color: #08142c;
+    -fx-border-color: #244878;
+    -fx-border-width: 1.5;
+    -fx-padding: 12 20;
+}
+
+.studio-stat-label {
+    -fx-text-fill: #c4d7ed;
+    -fx-font-size: 13.5px;
+}
+
+.studio-stat-value {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.studio-final-prize-banner {
+    -fx-shape: "M 0 50 L 4.0 0 L 96.0 0 L 100 50 L 96.0 100 L 4.0 100 Z";
+    -fx-background-color: #0b1c3d;
+    -fx-border-color: #f5af19;
+    -fx-border-width: 2;
+    -fx-padding: 10 32;
+    -fx-text-fill: #f5af19;
+    -fx-font-size: 16.5px;
+    -fx-font-weight: bold;
+}

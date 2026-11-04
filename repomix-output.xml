@@ -1,0 +1,4370 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+src/
+  main/
+    java/
+      hu/
+        milliomos/
+          model/
+            Question.java
+            ScoreRecord.java
+          repository/
+            QuestionRepository.java
+            ScoreRepository.java
+          service/
+            GameEngineService.java
+            GameTimerService.java
+            ScoreCalculator.java
+            SoundEffectService.java
+          test/
+            GameEngineServiceTest.java
+            QuestionRepositoryTest.java
+            ScoreCalculatorTest.java
+          ui/
+            AudienceChartPane.java
+            EditorTabView.java
+            GameTabView.java
+            PrizeLadderPane.java
+            ScoreboardTabView.java
+            StudioBackdropPane.java
+          Launcher.java
+          MainApp.java
+    resources/
+      characters.png
+      logo.png
+      questions.json
+      style.css
+.gitignore
+dependency-reduced-pom.xml
+exe-keszito.bat
+indito.bat
+pom.xml
+questions.json
+README.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/main/java/hu/milliomos/model/Question.java">
+package hu.milliomos.model;
+
+import java.util.List;
+
+public class Question {
+    private String questionText;
+    private List<String> options;
+    private int correctOptionIndex;
+    private String tip;
+    private List<Integer> probabilities; // 4 elemű lista, pl. [10, 70, 15, 5]
+
+    public Question() {}
+
+    public Question(String questionText, List<String> options, int correctOptionIndex, String tip, List<Integer> probabilities) {
+        this.questionText = questionText;
+        this.options = options;
+        this.correctOptionIndex = correctOptionIndex;
+        this.tip = tip;
+        this.probabilities = probabilities;
+    }
+
+    public String getQuestionText() { return questionText; }
+    public List<String> getOptions() { return options; }
+    public int getCorrectOptionIndex() { return correctOptionIndex; }
+    public String getTip() { return tip; }
+    public List<Integer> getProbabilities() { return probabilities; }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/model/ScoreRecord.java">
+package hu.milliomos.model;
+
+public class ScoreRecord {
+    private String playerName;
+    private int answerPoints;
+    private int helpPenalty;
+    private int remainingSeconds;       // Megtartva a korábbi JSON adatok kompatibilitásához
+    private int totalElapsedSeconds;    // Kezdéstől az elért eredményig eltelt összes idő (mp)
+    private double timeMultiplier;
+    private int finalScore;
+    private String playedAt;
+
+    public ScoreRecord() {}
+
+    public ScoreRecord(String playerName, int answerPoints, int helpPenalty,
+                       int remainingSeconds, int totalElapsedSeconds,
+                       double timeMultiplier, int finalScore, String playedAt) {
+        this.playerName = playerName;
+        this.answerPoints = answerPoints;
+        this.helpPenalty = helpPenalty;
+        this.remainingSeconds = remainingSeconds;
+        this.totalElapsedSeconds = totalElapsedSeconds;
+        this.timeMultiplier = timeMultiplier;
+        this.finalScore = finalScore;
+        this.playedAt = playedAt;
+    }
+
+    public String getPlayerName() { return playerName; }
+    public int getAnswerPoints() { return answerPoints; }
+    public int getHelpPenalty() { return helpPenalty; }
+    public int getRemainingSeconds() { return remainingSeconds; }
+    public int getTotalElapsedSeconds() {
+        return totalElapsedSeconds > 0 ? totalElapsedSeconds : remainingSeconds;
+    }
+    public double getTimeMultiplier() { return timeMultiplier; }
+    public int getFinalScore() { return finalScore; }
+    public String getPlayedAt() { return playedAt; }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/repository/QuestionRepository.java">
+package hu.milliomos.repository;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+import hu.milliomos.model.Question;
+
+import java.io.*;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
+
+public class QuestionRepository {
+    private static final String DEFAULT_RESOURCE = "/questions.json";
+    private final Path filePath;
+    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+    public QuestionRepository() {
+        this(Path.of("questions.json"));
+        ensureExternalFileExists();
+    }
+
+    public QuestionRepository(Path filePath) {
+        this.filePath = filePath;
+    }
+
+    private void ensureExternalFileExists() {
+        if (!Files.exists(filePath)) {
+            try (InputStream is = getClass().getResourceAsStream(DEFAULT_RESOURCE)) {
+                if (is != null) {
+                    Files.copy(is, filePath, StandardCopyOption.REPLACE_EXISTING);
+                }
+            } catch (IOException e) {
+                throw new UncheckedIOException("Nem sikerült kicsomagolni az alapértelmezett kérdéseket!", e);
+            }
+        }
+    }
+
+    public List<Question> findAll() {
+        if (!Files.exists(filePath)) {
+            return new ArrayList<>();
+        }
+        try (Reader reader = Files.newBufferedReader(filePath, StandardCharsets.UTF_8)) {
+            Type listType = new TypeToken<ArrayList<Question>>() {}.getType();
+            List<Question> questions = gson.fromJson(reader, listType);
+            return questions != null ? questions : new ArrayList<>();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Hiba a kérdések betöltésekor!", e);
+        }
+    }
+
+    public void saveNewQuestion(Question question) {
+        List<Question> questions = findAll();
+        questions.add(question);
+        writeAll(questions);
+    }
+
+    public void updateQuestion(int index, Question updatedQuestion) {
+        List<Question> questions = findAll();
+        if (index >= 0 && index < questions.size()) {
+            questions.set(index, updatedQuestion);
+            writeAll(questions);
+        }
+    }
+
+    public void deleteQuestion(int index) {
+        List<Question> questions = findAll();
+        if (index >= 0 && index < questions.size()) {
+            questions.remove(index);
+            writeAll(questions);
+        }
+    }
+
+    private void writeAll(List<Question> questions) {
+        try (Writer writer = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8)) {
+            gson.toJson(questions, writer);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Hiba a kérdések mentésekor!", e);
+        }
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/repository/ScoreRepository.java">
+package hu.milliomos.repository;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+import hu.milliomos.model.ScoreRecord;
+
+import java.io.*;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+public class ScoreRepository {
+    private static final Path FILE_PATH = Path.of("scores.json");
+    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+    public List<ScoreRecord> findAllSorted() {
+        if (!Files.exists(FILE_PATH)) {
+            return new ArrayList<>();
+        }
+        try (Reader reader = Files.newBufferedReader(FILE_PATH, StandardCharsets.UTF_8)) {
+            Type listType = new TypeToken<ArrayList<ScoreRecord>>() {}.getType();
+            List<ScoreRecord> scores = gson.fromJson(reader, listType);
+            if (scores == null) return new ArrayList<>();
+            scores.sort(Comparator.comparingInt(ScoreRecord::getFinalScore).reversed());
+            return scores;
+        } catch (IOException e) {
+            throw new UncheckedIOException("Hiba az eredmények betöltésekor!", e);
+        }
+    }
+
+    public void saveScore(ScoreRecord newRecord) {
+        List<ScoreRecord> scores = findAllSorted();
+        scores.add(newRecord);
+        try (Writer writer = Files.newBufferedWriter(FILE_PATH, StandardCharsets.UTF_8)) {
+            gson.toJson(scores, writer);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Hiba az eredmény mentésekor!", e);
+        }
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/service/GameEngineService.java">
+package hu.milliomos.service;
+
+import hu.milliomos.model.Question;
+import hu.milliomos.model.ScoreRecord;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class GameEngineService {
+    public static final int MAX_QUESTIONS = 15;
+    public static final int PENALTY_TIP = 0;
+    public static final int PENALTY_PROBABILITIES = 0;
+    public static final int PENALTY_HALVING = 0;
+
+    public static final int MILESTONE_1_PRIZE = 100_000;   // 5. kérdés (1. garantált szint)
+    public static final int MILESTONE_2_PRIZE = 1_500_000; // 10. kérdés (2. garantált szint)
+    public static final int GRAND_PRIZE = 40_000_000;      // 15. kérdés (főnyeremény)
+
+    private final ScoreCalculator scoreCalculator;
+    private List<Question> activeQuestions = new ArrayList<>();
+    private String currentPlayerName;
+    private int currentQuestionIndex;
+    private int accumulatedAnswerPoints; // Eddig megszerzett nyeremény (Ft)
+    private int accumulatedHelpPenalty;  // 0, mert nincs pontlevonás
+
+    private boolean tipUsed;
+    private boolean probabilitiesUsed;
+    private boolean halvingUsed;
+
+    public GameEngineService(ScoreCalculator scoreCalculator) {
+        this.scoreCalculator = scoreCalculator;
+    }
+
+    public boolean startNewGame(String playerName, List<Question> allQuestions) {
+        if (allQuestions.size() < MAX_QUESTIONS) {
+            return false;
+        }
+        this.currentPlayerName = playerName;
+        this.currentQuestionIndex = 0;
+        this.accumulatedAnswerPoints = 0;
+        this.accumulatedHelpPenalty = 0;
+        this.tipUsed = false;
+        this.probabilitiesUsed = false;
+        this.halvingUsed = false;
+
+        // 15 véletlenszerű kérdés kiválasztása
+        List<Question> shuffledPool = new ArrayList<>(allQuestions);
+        Collections.shuffle(shuffledPool);
+
+        // Minden kérdésnél a 4 válaszlehetőség sorrendjének véletlenszerű megkeverése
+        this.activeQuestions = new ArrayList<>(MAX_QUESTIONS);
+        for (int i = 0; i < MAX_QUESTIONS; i++) {
+            this.activeQuestions.add(shuffleQuestionOptions(shuffledPool.get(i)));
+        }
+        return true;
+    }
+
+    /**
+     * Véletlenszerűen megkeveri a 4 válaszlehetőség helyét, és megfelelően átigazítja
+     * a helyes válasz indexét és a közönség szavazati arányait.
+     */
+    public static Question shuffleQuestionOptions(Question original) {
+        if (original == null || original.getOptions() == null || original.getOptions().size() != 4) {
+            return original;
+        }
+
+        List<Integer> indices = new ArrayList<>(List.of(0, 1, 2, 3));
+        Collections.shuffle(indices);
+
+        List<String> newOptions = new ArrayList<>(4);
+        List<Integer> newProbs = new ArrayList<>(4);
+        int newCorrectIndex = 0;
+
+        for (int newPos = 0; newPos < 4; newPos++) {
+            int origIdx = indices.get(newPos);
+            newOptions.add(original.getOptions().get(origIdx));
+            if (origIdx == original.getCorrectOptionIndex()) {
+                newCorrectIndex = newPos;
+            }
+            if (original.getProbabilities() != null && original.getProbabilities().size() == 4) {
+                newProbs.add(original.getProbabilities().get(origIdx));
+            }
+        }
+
+        if (newProbs.size() != 4) {
+            newProbs = original.getProbabilities();
+        }
+
+        return new Question(
+                original.getQuestionText(),
+                newOptions,
+                newCorrectIndex,
+                original.getTip(),
+                newProbs
+        );
+    }
+
+    public Question getCurrentQuestion() {
+        return activeQuestions.get(currentQuestionIndex);
+    }
+
+    public boolean submitAnswer(int selectedOptionIndex) {
+        Question current = getCurrentQuestion();
+        if (current.getCorrectOptionIndex() == selectedOptionIndex) {
+            accumulatedAnswerPoints = scoreCalculator.calculateQuestionReward(currentQuestionIndex);
+            currentQuestionIndex++;
+            return true;
+        }
+        applyWrongAnswerDrop();
+        return false;
+    }
+
+    /**
+     * Hibás válasz esetén visszaesés a garantált mérföldkőre:
+     * - 1-5. kérdés elrontásakor: 0 Ft
+     * - 6-10. kérdés elrontásakor: 100 000 Ft
+     * - 11-15. kérdés elrontásakor: 1 500 000 Ft
+     */
+    public void applyWrongAnswerDrop() {
+        if (currentQuestionIndex < 5) {
+            this.accumulatedAnswerPoints = 0;
+        } else if (currentQuestionIndex < 10) {
+            this.accumulatedAnswerPoints = MILESTONE_1_PRIZE;
+        } else {
+            this.accumulatedAnswerPoints = MILESTONE_2_PRIZE;
+        }
+    }
+
+    public boolean canWalkAway() {
+        return currentQuestionIndex > 0 && currentQuestionIndex < MAX_QUESTIONS;
+    }
+
+    public boolean isVictory() {
+        return currentQuestionIndex >= MAX_QUESTIONS;
+    }
+
+    public String useTipHelp() {
+        if (tipUsed) return null;
+        tipUsed = true;
+        return getCurrentQuestion().getTip();
+    }
+
+    public List<Integer> useProbabilitiesHelp() {
+        if (probabilitiesUsed) return null;
+        probabilitiesUsed = true;
+        return getCurrentQuestion().getProbabilities();
+    }
+
+    public List<Integer> useHalvingHelp() {
+        if (halvingUsed) return null;
+        halvingUsed = true;
+
+        int correct = getCurrentQuestion().getCorrectOptionIndex();
+        List<Integer> wrongIndices = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            if (i != correct) wrongIndices.add(i);
+        }
+        Collections.shuffle(wrongIndices);
+        return wrongIndices.subList(0, 2);
+    }
+
+    public ScoreRecord buildScoreRecord(int totalElapsedSeconds) {
+        int finalPrize = accumulatedAnswerPoints;
+        return scoreCalculator.createFinalRecord(
+                currentPlayerName,
+                finalPrize,
+                0,
+                totalElapsedSeconds
+        );
+    }
+
+    public int getCurrentQuestionNumber() { return currentQuestionIndex + 1; }
+    public int getAccumulatedAnswerPoints() { return accumulatedAnswerPoints; }
+    public int getAccumulatedHelpPenalty() { return 0; }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/service/GameTimerService.java">
+package hu.milliomos.service;
+
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.util.Duration;
+
+public class GameTimerService {
+    public static final int QUESTION_TIME_SECONDS = 90; // 90 másodperc minden kérdésre külön-külön
+
+    // Kérdésenkénti visszaszámláló (90 -> 0)
+    private final IntegerProperty remainingSeconds = new SimpleIntegerProperty(QUESTION_TIME_SECONDS);
+    private Timeline questionTimeline;
+
+    // Háttérben futó teljes játékidő-számláló (0 -> növekszik a kezdéstől a játék végéig)
+    private final IntegerProperty totalElapsedSeconds = new SimpleIntegerProperty(0);
+    private Timeline totalStopwatchTimeline;
+    private long gameStartTimeMs = 0;
+
+    public void startQuestionTimer(Runnable onTimeExpired) {
+        stopQuestionTimer();
+        remainingSeconds.set(QUESTION_TIME_SECONDS);
+        questionTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
+            int current = remainingSeconds.get() - 1;
+            remainingSeconds.set(current);
+            if (current <= 0) {
+                stopQuestionTimer();
+                if (onTimeExpired != null) {
+                    onTimeExpired.run();
+                }
+            }
+        }));
+        questionTimeline.setCycleCount(Timeline.INDEFINITE);
+        questionTimeline.play();
+    }
+
+    public void start(Runnable onTimeExpired) {
+        startQuestionTimer(onTimeExpired);
+    }
+
+    public void stopQuestionTimer() {
+        if (questionTimeline != null) {
+            questionTimeline.stop();
+        }
+    }
+
+    public void stop() {
+        stopQuestionTimer();
+    }
+
+    public int getRemainingSeconds() {
+        return remainingSeconds.get();
+    }
+
+    public IntegerProperty remainingSecondsProperty() {
+        return remainingSeconds;
+    }
+
+    /**
+     * Elindítja a kezdéstől a játék végéig mérő háttérbeli időmérőt
+     */
+    public void startTotalGameStopwatch() {
+        stopTotalGameStopwatch();
+        totalElapsedSeconds.set(0);
+        gameStartTimeMs = System.currentTimeMillis();
+        totalStopwatchTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
+            totalElapsedSeconds.set(totalElapsedSeconds.get() + 1);
+        }));
+        totalStopwatchTimeline.setCycleCount(Timeline.INDEFINITE);
+        totalStopwatchTimeline.play();
+    }
+
+    /**
+     * Leállítja a háttérbeli teljes játékidő-mérőt
+     */
+    public void stopTotalGameStopwatch() {
+        if (totalStopwatchTimeline != null) {
+            totalStopwatchTimeline.stop();
+        }
+        if (gameStartTimeMs > 0) {
+            int actualSecs = (int) ((System.currentTimeMillis() - gameStartTimeMs) / 1000);
+            totalElapsedSeconds.set(Math.max(totalElapsedSeconds.get(), actualSecs));
+        }
+    }
+
+    public int getTotalElapsedSeconds() {
+        return totalElapsedSeconds.get();
+    }
+
+    public IntegerProperty totalElapsedSecondsProperty() {
+        return totalElapsedSeconds;
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/service/ScoreCalculator.java">
+package hu.milliomos.service;
+
+import hu.milliomos.model.ScoreRecord;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
+public class ScoreCalculator {
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    // A valódi "Legyen Ön is milliomos" hivatalos nyereménylétrája (15 szint)
+    public static final int[] PRIZES = {
+            5_000,
+            10_000,
+            25_000,
+            50_000,
+            100_000,   // 5. kérdés: 1. garantált szint (megállás lehetősége)
+            200_000,
+            300_000,
+            500_000,
+            800_000,
+            1_500_000, // 10. kérdés: 2. garantált szint (megállás lehetősége)
+            3_000_000,
+            5_000_000,
+            10_000_000,
+            20_000_000,
+            40_000_000 // 15. kérdés: Főnyeremény
+    };
+
+    public int calculateQuestionReward(int questionIndex) {
+        if (questionIndex < 0 || questionIndex >= PRIZES.length) {
+            return 0;
+        }
+        return PRIZES[questionIndex];
+    }
+
+    /**
+     * Ezres tagolás szóközzel és "Ft" utótaggal (pl. "100 000 Ft", "40 000 000 Ft")
+     */
+    public static String formatFt(int amount) {
+        return String.format(Locale.US, "%,d", amount).replace(',', ' ') + " Ft";
+    }
+
+    /**
+     * Ezres tagolás szóközzel Ft nélkül
+     */
+    public static String formatAmount(int amount) {
+        return String.format(Locale.US, "%,d", amount).replace(',', ' ');
+    }
+
+    /**
+     * Eltelt játékidő formázása (pl. "45 mp", "1 perc", "2 perc 14 mp")
+     */
+    public static String formatDuration(int totalSeconds) {
+        if (totalSeconds < 60) {
+            return totalSeconds + " mp";
+        }
+        int mins = totalSeconds / 60;
+        int secs = totalSeconds % 60;
+        if (secs == 0) {
+            return mins + " perc";
+        }
+        return String.format("%d perc %02d mp", mins, secs);
+    }
+
+    public ScoreRecord createFinalRecord(String playerName, int wonPrize, int helpPenalty, int totalElapsedSeconds) {
+        return new ScoreRecord(
+                playerName,
+                wonPrize,
+                0,
+                totalElapsedSeconds,
+                totalElapsedSeconds,
+                1.0,
+                wonPrize,
+                LocalDateTime.now().format(FORMATTER)
+        );
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/service/SoundEffectService.java">
+package hu.milliomos.service;
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.SourceDataLine;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class SoundEffectService {
+    private static final float SAMPLE_RATE = 44100f;
+    private boolean muted = false;
+
+    private final ExecutorService soundExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "studio-sound-thread");
+        t.setDaemon(true);
+        return t;
+    });
+
+    public void playTick() {
+        playSequence(new int[]{880}, new int[]{35}, 0.18);
+    }
+
+    public void playSelect() {
+        playSequence(new int[]{440, 554}, new int[]{90, 140}, 0.45);
+    }
+
+    public void playCorrect() {
+        playSequence(new int[]{523, 659, 784}, new int[]{110, 110, 260}, 0.55);
+    }
+
+    public void playWrong() {
+        playSequence(new int[]{311, 233}, new int[]{220, 420}, 0.60);
+    }
+
+    public void playLifeline() {
+        playSequence(new int[]{659, 880}, new int[]{80, 140}, 0.45);
+    }
+
+    public void playWalkAway() {
+        playSequence(new int[]{392, 494, 587}, new int[]{110, 110, 280}, 0.55);
+    }
+
+    public void playVictory() {
+        playSequence(new int[]{523, 659, 784, 1046}, new int[]{140, 140, 140, 450}, 0.65);
+    }
+
+    public boolean isMuted() {
+        return muted;
+    }
+
+    public void setMuted(boolean muted) {
+        this.muted = muted;
+    }
+
+    private void playSequence(int[] frequencies, int[] durationsMs, double volume) {
+        if (muted) return;
+        soundExecutor.submit(() -> {
+            AudioFormat format = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
+            try (SourceDataLine line = AudioSystem.getSourceDataLine(format)) {
+                line.open(format);
+                line.start();
+
+                for (int i = 0; i < frequencies.length; i++) {
+                    byte[] toneBuffer = synthesizeTone(frequencies[i], durationsMs[i], volume);
+                    line.write(toneBuffer, 0, toneBuffer.length);
+                }
+                line.drain();
+            } catch (Exception ignored) {
+            }
+        });
+    }
+
+    private byte[] synthesizeTone(int freqHz, int durationMs, double volume) {
+        int totalSamples = (int) ((durationMs / 1000.0) * SAMPLE_RATE);
+        byte[] buffer = new byte[totalSamples * 2];
+        int fadeSamples = Math.max(1, totalSamples / 8);
+
+        for (int i = 0; i < totalSamples; i++) {
+            double angle = 2.0 * Math.PI * i * freqHz / SAMPLE_RATE;
+            double wave = (0.75 * Math.sin(angle)) + (0.25 * Math.sin(2.0 * angle));
+
+            double envelope = 1.0;
+            if (i < fadeSamples) {
+                envelope = (double) i / fadeSamples;
+            } else if (i > totalSamples - fadeSamples) {
+                envelope = (double) (totalSamples - i) / fadeSamples;
+            }
+
+            short sample = (short) (wave * envelope * volume * Short.MAX_VALUE);
+            buffer[2 * i] = (byte) (sample & 0xFF);
+            buffer[2 * i + 1] = (byte) ((sample >> 8) & 0xFF);
+        }
+        return buffer;
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/test/GameEngineServiceTest.java">
+package hu.milliomos.test;
+
+import hu.milliomos.model.Question;
+import hu.milliomos.model.ScoreRecord;
+import hu.milliomos.service.GameEngineService;
+import hu.milliomos.service.ScoreCalculator;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+public class GameEngineServiceTest {
+
+    private GameEngineService gameEngine;
+    private List<Question> mockQuestions;
+
+    @BeforeEach
+    void setUp() {
+        gameEngine = new GameEngineService(new ScoreCalculator());
+        mockQuestions = createSampleQuestions(20);
+    }
+
+    private List<Question> createSampleQuestions(int count) {
+        List<Question> list = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            list.add(new Question(
+                    "Teszt kérdés #" + (i + 1),
+                    List.of("A", "B", "C", "D"),
+                    1,
+                    "Tipp szöveg",
+                    List.of(10, 70, 10, 10)
+            ));
+        }
+        return list;
+    }
+
+    @Test
+    @DisplayName("Kevesebb mint 15 kérdés esetén a játék nem indul el")
+    void testStartNewGameFailsWithTooFewQuestions() {
+        List<Question> onlyTen = createSampleQuestions(10);
+        assertFalse(gameEngine.startNewGame("Jatekos", onlyTen));
+    }
+
+    @Test
+    @DisplayName("Legalább 15 kérdés esetén a játék sikeresen elindul 0 Ft nyereménnyel")
+    void testStartNewGameSucceeds() {
+        assertTrue(gameEngine.startNewGame("Jatekos", mockQuestions));
+        assertEquals(1, gameEngine.getCurrentQuestionNumber());
+        assertEquals(0, gameEngine.getAccumulatedAnswerPoints());
+        assertEquals(0, gameEngine.getAccumulatedHelpPenalty());
+        assertFalse(gameEngine.canWalkAway());
+        assertFalse(gameEngine.isVictory());
+    }
+
+    @Test
+    @DisplayName("Megálláskor megmarad az eddigi összeg, hibás válasznál visszaesik a garantált szintre")
+    void testWalkAwayAndMilestoneDrop() {
+        gameEngine.startNewGame("Jatekos", mockQuestions);
+
+        // 6 helyes válasz: 1.(5e), 2.(10e), 3.(25e), 4.(50e), 5.(100e), 6.(200e)
+        for (int i = 0; i < 6; i++) {
+            int correctIdx = gameEngine.getCurrentQuestion().getCorrectOptionIndex();
+            assertTrue(gameEngine.submitAnswer(correctIdx));
+        }
+        assertEquals(200_000, gameEngine.getAccumulatedAnswerPoints());
+        assertTrue(gameEngine.canWalkAway());
+
+        // 7. kérdés elrontása -> visszaesik az 5. kérdés garantált 100 000 Ft-jára
+        int wrongIdx = (gameEngine.getCurrentQuestion().getCorrectOptionIndex() + 1) % 4;
+        assertFalse(gameEngine.submitAnswer(wrongIdx));
+        assertEquals(100_000, gameEngine.getAccumulatedAnswerPoints());
+    }
+
+    @Test
+    @DisplayName("Segítségek egyszer használhatók és nincs pontlevonás")
+    void testLifelinesCanOnlyBeUsedOnceWithoutPenalty() {
+        gameEngine.startNewGame("Jatekos", mockQuestions);
+
+        assertNotNull(gameEngine.useTipHelp());
+        assertEquals(0, gameEngine.getAccumulatedHelpPenalty());
+        assertNull(gameEngine.useTipHelp());
+
+        assertNotNull(gameEngine.useProbabilitiesHelp());
+        assertEquals(0, gameEngine.getAccumulatedHelpPenalty());
+        assertNull(gameEngine.useProbabilitiesHelp());
+
+        int correctIdx = gameEngine.getCurrentQuestion().getCorrectOptionIndex();
+        List<Integer> hidden = gameEngine.useHalvingHelp();
+        assertNotNull(hidden);
+        assertEquals(2, hidden.size());
+        assertFalse(hidden.contains(correctIdx));
+        assertEquals(0, gameEngine.getAccumulatedHelpPenalty());
+        assertNull(gameEngine.useHalvingHelp());
+    }
+
+    @Test
+    @DisplayName("15 helyes válasz esetén 40 000 000 Ft a végső nyeremény")
+    void testFullVictoryPrize() {
+        gameEngine.startNewGame("Jatekos", mockQuestions);
+
+        for (int i = 0; i < 15; i++) {
+            gameEngine.submitAnswer(gameEngine.getCurrentQuestion().getCorrectOptionIndex());
+        }
+        assertTrue(gameEngine.isVictory());
+
+        ScoreRecord winRecord = gameEngine.buildScoreRecord(85);
+        assertEquals(40_000_000, winRecord.getAnswerPoints());
+        assertEquals(40_000_000, winRecord.getFinalScore());
+        assertEquals(0, winRecord.getHelpPenalty());
+        assertEquals(85, winRecord.getRemainingSeconds());
+    }
+
+    @Test
+    @DisplayName("A válaszlehetőségek megkeverése megőrzi a helyes válasz szövegét és a valószínűségeket")
+    void testQuestionOptionsShufflingPreservesCorrectAnswer() {
+        Question orig = new Question(
+                "Mi Magyarország fővárosa?",
+                List.of("Berlin", "Párizs", "Róma", "Budapest"),
+                3,
+                "Duna partján fekszik",
+                List.of(5, 10, 15, 70)
+        );
+        Question shuffled = GameEngineService.shuffleQuestionOptions(orig);
+        int correctIdx = shuffled.getCorrectOptionIndex();
+
+        assertEquals("Budapest", shuffled.getOptions().get(correctIdx));
+        assertEquals(70, shuffled.getProbabilities().get(correctIdx));
+        assertEquals(4, shuffled.getOptions().size());
+        assertTrue(shuffled.getOptions().containsAll(orig.getOptions()));
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/test/QuestionRepositoryTest.java">
+package hu.milliomos.test;
+
+import hu.milliomos.model.Question;
+import hu.milliomos.repository.QuestionRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Path;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+public class QuestionRepositoryTest {
+
+    @TempDir
+    Path tempDir;
+
+    private QuestionRepository repository;
+
+    @BeforeEach
+    void setUp() {
+        Path testJsonPath = tempDir.resolve("test-questions.json");
+        repository = new QuestionRepository(testJsonPath);
+    }
+
+    @Test
+    @DisplayName("Új kérdés mentése, módosítása és törlése a JSON fájlban")
+    void testCrudOperations() {
+        assertTrue(repository.findAll().isEmpty());
+
+        Question q1 = new Question("1. Kérdés?", List.of("A", "B", "C", "D"), 0, "Tipp 1", List.of(70, 10, 10, 10));
+        Question q2 = new Question("2. Kérdés?", List.of("A", "B", "C", "D"), 2, "Tipp 2", List.of(10, 10, 70, 10));
+        repository.saveNewQuestion(q1);
+        repository.saveNewQuestion(q2);
+
+        List<Question> loaded = repository.findAll();
+        assertEquals(2, loaded.size());
+        assertEquals("1. Kérdés?", loaded.get(0).getQuestionText());
+
+        Question updatedQ1 = new Question("Módosított 1. Kérdés?", List.of("A", "B", "C", "D"), 1, "Új tipp", List.of(10, 70, 10, 10));
+        repository.updateQuestion(0, updatedQ1);
+
+        loaded = repository.findAll();
+        assertEquals("Módosított 1. Kérdés?", loaded.get(0).getQuestionText());
+        assertEquals(1, loaded.get(0).getCorrectOptionIndex());
+
+        repository.deleteQuestion(0);
+        loaded = repository.findAll();
+        assertEquals(1, loaded.size());
+        assertEquals("2. Kérdés?", loaded.get(0).getQuestionText());
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/test/ScoreCalculatorTest.java">
+package hu.milliomos.test;
+
+import hu.milliomos.model.ScoreRecord;
+import hu.milliomos.service.ScoreCalculator;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+public class ScoreCalculatorTest {
+
+    private ScoreCalculator calculator;
+
+    @BeforeEach
+    void setUp() {
+        calculator = new ScoreCalculator();
+    }
+
+    @Test
+    @DisplayName("A hivatalos Forint értékek pontosak a szinteken")
+    void testCalculateQuestionReward() {
+        assertEquals(5_000, calculator.calculateQuestionReward(0));      // 1. kérdés
+        assertEquals(10_000, calculator.calculateQuestionReward(1));     // 2. kérdés
+        assertEquals(100_000, calculator.calculateQuestionReward(4));    // 5. kérdés (1. mérföldkő)
+        assertEquals(1_500_000, calculator.calculateQuestionReward(9));  // 10. kérdés (2. mérföldkő)
+        assertEquals(40_000_000, calculator.calculateQuestionReward(14)); // 15. kérdés (Főnyeremény)
+    }
+
+    @Test
+    @DisplayName("Ezres tagolás szóközzel és Ft utótaggal helyesen formáz")
+    void testFormatFt() {
+        assertEquals("0 Ft", ScoreCalculator.formatFt(0));
+        assertEquals("5 000 Ft", ScoreCalculator.formatFt(5000));
+        assertEquals("100 000 Ft", ScoreCalculator.formatFt(100000));
+        assertEquals("1 500 000 Ft", ScoreCalculator.formatFt(1500000));
+        assertEquals("40 000 000 Ft", ScoreCalculator.formatFt(40000000));
+    }
+
+    @Test
+    @DisplayName("Végső rekord létrehozása: a megnyert összeg a végső pont, segítséglevonás 0, összes eltelt idő helyes")
+    void testCreateFinalRecordNormalCase() {
+        ScoreRecord record = calculator.createFinalRecord("TesztElek", 1_500_000, 0, 75);
+
+        assertEquals("TesztElek", record.getPlayerName());
+        assertEquals(1_500_000, record.getAnswerPoints());
+        assertEquals(0, record.getHelpPenalty());
+        assertEquals(75, record.getTotalElapsedSeconds());
+        assertEquals(75, record.getRemainingSeconds());
+        assertEquals(1_500_000, record.getFinalScore());
+        assertNotNull(record.getPlayedAt());
+    }
+
+    @Test
+    @DisplayName("Időtartam formázása helyesen kezeli a másodperceket és perceket")
+    void testFormatDuration() {
+        assertEquals("0 mp", ScoreCalculator.formatDuration(0));
+        assertEquals("45 mp", ScoreCalculator.formatDuration(45));
+        assertEquals("1 perc", ScoreCalculator.formatDuration(60));
+        assertEquals("2 perc 14 mp", ScoreCalculator.formatDuration(134));
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/ui/AudienceChartPane.java">
+package hu.milliomos.ui;
+
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Label;
+import javafx.scene.layout.*;
+import javafx.util.Duration;
+
+import java.util.Collections;
+import java.util.List;
+
+public class AudienceChartPane extends VBox {
+    private static final double MAX_BAR_HEIGHT = 85.0;
+
+    private final Label[] percentLabels = new Label[4];
+    private final Region[] barFills = new Region[4];
+
+    public AudienceChartPane() {
+        setSpacing(6);
+        setPadding(new Insets(8, 16, 8, 16));
+        setMaxSize(300, 155);
+        setAlignment(Pos.CENTER);
+        getStyleClass().addAll("glass-panel", "audience-chart-pane");
+
+        Label title = new Label("📊 KÖZÖNSÉG SZAVAZÁS");
+        title.setStyle("-fx-text-fill: #00d2ff; -fx-font-weight: bold; -fx-font-size: 12.5px;");
+
+        HBox barsContainer = new HBox(20);
+        barsContainer.setAlignment(Pos.BOTTOM_CENTER);
+        barsContainer.setPadding(new Insets(2, 0, 0, 0));
+
+        String[] optionLetters = {"♦ A", "♦ B", "♦ C", "♦ D"};
+
+        for (int i = 0; i < 4; i++) {
+            VBox column = new VBox(3);
+            column.setAlignment(Pos.BOTTOM_CENTER);
+
+            Label pctLabel = new Label("0%");
+            pctLabel.getStyleClass().add("chart-pct-label");
+            percentLabels[i] = pctLabel;
+
+            StackPane barTrack = new StackPane();
+            barTrack.setPrefSize(36, MAX_BAR_HEIGHT);
+            barTrack.setMaxSize(36, MAX_BAR_HEIGHT);
+            barTrack.setAlignment(Pos.BOTTOM_CENTER);
+            barTrack.getStyleClass().add("chart-bar-track");
+
+            Region barFill = new Region();
+            barFill.setPrefWidth(32);
+            barFill.setMaxWidth(32);
+            barFill.setPrefHeight(0);
+            barFill.setMaxHeight(0);
+            barFill.getStyleClass().add("chart-bar-fill");
+            barFills[i] = barFill;
+
+            barTrack.getChildren().add(barFill);
+
+            Label axisLabel = new Label(optionLetters[i]);
+            axisLabel.getStyleClass().add("chart-axis-label");
+
+            column.getChildren().addAll(pctLabel, barTrack, axisLabel);
+            barsContainer.getChildren().add(column);
+        }
+
+        getChildren().addAll(title, barsContainer);
+        hideChart();
+    }
+
+    public void showProbabilities(List<Integer> probabilities) {
+        if (probabilities == null || probabilities.size() != 4) return;
+
+        setVisible(true);
+        setManaged(true);
+
+        int maxProb = Collections.max(probabilities);
+        Timeline timeline = new Timeline();
+
+        for (int i = 0; i < 4; i++) {
+            int targetPct = probabilities.get(i);
+            double targetHeight = Math.max(4.0, (targetPct / 100.0) * MAX_BAR_HEIGHT);
+
+            Region bar = barFills[i];
+            Label pctLabel = percentLabels[i];
+
+            bar.getStyleClass().removeAll("chart-bar-highest");
+            if (targetPct == maxProb && maxProb > 0) {
+                bar.getStyleClass().add("chart-bar-highest");
+            }
+
+            bar.setPrefHeight(0);
+            bar.setMaxHeight(0);
+            pctLabel.setText(targetPct + "%");
+
+            KeyValue kvPref = new KeyValue(bar.prefHeightProperty(), targetHeight, Interpolator.EASE_OUT);
+            KeyValue kvMax = new KeyValue(bar.maxHeightProperty(), targetHeight, Interpolator.EASE_OUT);
+
+            timeline.getKeyFrames().add(new KeyFrame(Duration.millis(750), kvPref, kvMax));
+        }
+
+        timeline.play();
+    }
+
+    public void hideChart() {
+        setVisible(false);
+        setManaged(false);
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/ui/EditorTabView.java">
+package hu.milliomos.ui;
+
+import hu.milliomos.model.Question;
+import hu.milliomos.repository.QuestionRepository;
+import javafx.collections.FXCollections;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+
+import java.util.Arrays;
+import java.util.List;
+
+public class EditorTabView extends BorderPane {
+    private final QuestionRepository questionRepository;
+    private final ListView<Question> questionListView = new ListView<>();
+
+    private final TextField questionField = new TextField();
+    private final TextField[] optionFields = new TextField[4];
+    @SuppressWarnings("unchecked")
+    private final Spinner<Integer>[] probSpinners = new Spinner[4];
+    private final ComboBox<String> correctCombo = new ComboBox<>();
+    private final TextField tipField = new TextField();
+
+    private final Button updateBtn = new Button("✏ Kijelölt módosítása");
+    private final Button deleteBtn = new Button("🗑 Kijelölt törlése");
+
+    public EditorTabView(QuestionRepository questionRepository) {
+        this.questionRepository = questionRepository;
+        setPadding(new Insets(18));
+
+        Label title = new Label("Kérdésszerkesztő");
+        title.setFont(Font.font("System", FontWeight.BOLD, 20));
+        title.setStyle("-fx-text-fill: #f5af19;");
+        BorderPane.setMargin(title, new Insets(0, 0, 12, 0));
+        setTop(title);
+
+        setLeft(buildQuestionListPane());
+        setCenter(buildEditorFormPane());
+
+        refreshQuestionList();
+    }
+
+    private VBox buildQuestionListPane() {
+        VBox leftBox = new VBox(10);
+        leftBox.setPrefWidth(320);
+        leftBox.setPadding(new Insets(0, 15, 0, 0));
+
+        Label listHeader = new Label("Meglévő kérdések:");
+        listHeader.setStyle("-fx-text-fill: #b0c4de; -fx-font-weight: bold;");
+
+        questionListView.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(Question item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText((getIndex() + 1) + ". " + item.getQuestionText());
+                }
+            }
+        });
+
+        questionListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, selectedQuestion) -> {
+            boolean hasSelection = (selectedQuestion != null);
+            updateBtn.setDisable(!hasSelection);
+            deleteBtn.setDisable(!hasSelection);
+            if (hasSelection) {
+                populateForm(selectedQuestion);
+            }
+        });
+
+        VBox.setVgrow(questionListView, Priority.ALWAYS);
+
+        Button clearSelectionBtn = new Button("🔄 Űrlap ürítése (Új kérdés mód)");
+        clearSelectionBtn.setMaxWidth(Double.MAX_VALUE);
+        clearSelectionBtn.setOnAction(e -> clearForm());
+
+        leftBox.getChildren().addAll(listHeader, questionListView, clearSelectionBtn);
+        return leftBox;
+    }
+
+    private VBox buildEditorFormPane() {
+        VBox rightBox = new VBox(15);
+        rightBox.getStyleClass().add("glass-panel");
+        rightBox.setPadding(new Insets(20));
+
+        GridPane form = new GridPane();
+        form.setHgap(10);
+        form.setVgap(12);
+
+        questionField.setPrefWidth(360);
+        questionField.setPromptText("Írd be a kérdés szövegét...");
+
+        String[] labels = {"A válasz:", "B válasz:", "C válasz:", "D válasz:"};
+        int[] defaultProbs = {40, 25, 20, 15};
+
+        form.add(new Label("Kérdés szövege:"), 0, 0);
+        form.add(questionField, 1, 0, 3, 1);
+
+        for (int i = 0; i < 4; i++) {
+            optionFields[i] = new TextField();
+            Spinner<Integer> spinner = new Spinner<>(0, 100, defaultProbs[i]);
+            spinner.setEditable(true);
+            spinner.setPrefWidth(80);
+            spinner.focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
+                if (!isNowFocused) spinner.increment(0);
+            });
+            probSpinners[i] = spinner;
+
+            form.add(new Label(labels[i]), 0, i + 1);
+            form.add(optionFields[i], 1, i + 1);
+            form.add(new Label("Esély %:"), 2, i + 1);
+            form.add(probSpinners[i], 3, i + 1);
+        }
+
+        correctCombo.getItems().addAll("0 (A válasz)", "1 (B válasz)", "2 (C válasz)", "3 (D válasz)");
+        correctCombo.getSelectionModel().selectFirst();
+
+        tipField.setPromptText("Rövid szöveges segítség a játékosnak...");
+
+        form.add(new Label("Helyes válasz:"), 0, 5);
+        form.add(correctCombo, 1, 5);
+        form.add(new Label("Kisebb tipp:"), 0, 6);
+        form.add(tipField, 1, 6, 3, 1);
+
+        Button addNewBtn = new Button("➕ Mentés új kérdésként");
+        addNewBtn.getStyleClass().add("lifeline-button");
+
+        updateBtn.getStyleClass().add("lifeline-button");
+        updateBtn.setDisable(true);
+
+        deleteBtn.getStyleClass().add("lifeline-button");
+        deleteBtn.setStyle("-fx-border-color: #e74c3c; -fx-text-fill: #ffb3b3;");
+        deleteBtn.setDisable(true);
+
+        addNewBtn.setOnAction(e -> handleSaveNew());
+        updateBtn.setOnAction(e -> handleUpdateSelected());
+        deleteBtn.setOnAction(e -> handleDeleteSelected());
+
+        HBox actionButtons = new HBox(12, addNewBtn, updateBtn, deleteBtn);
+        actionButtons.setAlignment(Pos.CENTER_LEFT);
+        actionButtons.setPadding(new Insets(10, 0, 0, 0));
+
+        rightBox.getChildren().addAll(form, actionButtons);
+        return rightBox;
+    }
+
+    private void populateForm(Question q) {
+        questionField.setText(q.getQuestionText());
+        tipField.setText(q.getTip());
+        correctCombo.getSelectionModel().select(q.getCorrectOptionIndex());
+
+        for (int i = 0; i < 4; i++) {
+            optionFields[i].setText(q.getOptions().get(i));
+            probSpinners[i].getValueFactory().setValue(q.getProbabilities().get(i));
+        }
+    }
+
+    private Question validateAndBuildQuestion() {
+        String qText = questionField.getText().trim();
+        String tipText = tipField.getText().trim();
+        List<String> opts = Arrays.stream(optionFields).map(t -> t.getText().trim()).toList();
+        List<Integer> probs = Arrays.stream(probSpinners).map(Spinner::getValue).toList();
+
+        if (qText.isEmpty() || tipText.isEmpty() || opts.stream().anyMatch(String::isEmpty)) {
+            showAlert(Alert.AlertType.WARNING, "Hiányzó adat", "Minden mezőt kötelező kitölteni!");
+            return null;
+        }
+
+        int probSum = probs.stream().mapToInt(Integer::intValue).sum();
+        if (probSum != 100) {
+            showAlert(Alert.AlertType.WARNING, "Hibás százalékok",
+                    "A 4 válasz esélyeinek összege pontosan 100% kell legyen! (Jelenlegi: " + probSum + "%)");
+            return null;
+        }
+
+        int correctIdx = correctCombo.getSelectionModel().getSelectedIndex();
+        return new Question(qText, opts, correctIdx, tipText, probs);
+    }
+
+    private void handleSaveNew() {
+        Question newQuestion = validateAndBuildQuestion();
+        if (newQuestion == null) return;
+
+        questionRepository.saveNewQuestion(newQuestion);
+        refreshQuestionList();
+        clearForm();
+        showAlert(Alert.AlertType.INFORMATION, "Siker", "Az új kérdés bekerült a questions.json fájlba!");
+    }
+
+    private void handleUpdateSelected() {
+        int selectedIdx = questionListView.getSelectionModel().getSelectedIndex();
+        if (selectedIdx < 0) return;
+
+        Question updatedQuestion = validateAndBuildQuestion();
+        if (updatedQuestion == null) return;
+
+        questionRepository.updateQuestion(selectedIdx, updatedQuestion);
+        refreshQuestionList();
+        questionListView.getSelectionModel().select(selectedIdx);
+        showAlert(Alert.AlertType.INFORMATION, "Frissítve", "A kijelölt kérdés módosításai elmentve!");
+    }
+
+    private void handleDeleteSelected() {
+        int selectedIdx = questionListView.getSelectionModel().getSelectedIndex();
+        if (selectedIdx < 0) return;
+
+        if (questionRepository.findAll().size() <= 15) {
+            showAlert(Alert.AlertType.WARNING, "Törlés megtagadva",
+                    "Nem törölhetsz több kérdést, mert a játékhoz legalább 15 kérdés szükséges!");
+            return;
+        }
+
+        questionRepository.deleteQuestion(selectedIdx);
+        refreshQuestionList();
+        clearForm();
+        showAlert(Alert.AlertType.INFORMATION, "Törölve", "A kijelölt kérdés törölve lett a JSON fájlból.");
+    }
+
+    private void refreshQuestionList() {
+        questionListView.setItems(FXCollections.observableArrayList(questionRepository.findAll()));
+    }
+
+    private void clearForm() {
+        questionListView.getSelectionModel().clearSelection();
+        questionField.clear();
+        tipField.clear();
+        for (int i = 0; i < 4; i++) {
+            optionFields[i].clear();
+        }
+        probSpinners[0].getValueFactory().setValue(40);
+        probSpinners[1].getValueFactory().setValue(25);
+        probSpinners[2].getValueFactory().setValue(20);
+        probSpinners[3].getValueFactory().setValue(15);
+        correctCombo.getSelectionModel().selectFirst();
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String msg) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(msg);
+        alert.showAndWait();
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/ui/GameTabView.java">
+package hu.milliomos.ui;
+
+import hu.milliomos.model.Question;
+import hu.milliomos.model.ScoreRecord;
+import hu.milliomos.repository.QuestionRepository;
+import hu.milliomos.repository.ScoreRepository;
+import hu.milliomos.service.GameEngineService;
+import hu.milliomos.service.GameTimerService;
+import hu.milliomos.service.ScoreCalculator;
+import hu.milliomos.service.SoundEffectService;
+import javafx.animation.PauseTransition;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
+import javafx.stage.StageStyle;
+import javafx.util.Duration;
+
+import java.util.List;
+
+public class GameTabView extends StackPane {
+    private final QuestionRepository questionRepository;
+    private final ScoreRepository scoreRepository;
+    private final GameEngineService gameEngine;
+    private final GameTimerService timerService;
+    private final SoundEffectService soundService;
+    private final Runnable onScoreSavedCallback;
+    private final ScoreCalculator scoreCalculator = new ScoreCalculator();
+
+    private final StudioBackdropPane studioBackdrop = new StudioBackdropPane();
+    private final PrizeLadderPane prizeLadderPane = new PrizeLadderPane(scoreCalculator);
+    private final AudienceChartPane audienceChartPane = new AudienceChartPane();
+    private final VBox registrationPane = new VBox(14);
+    private final BorderPane quizPane = new BorderPane();
+
+    private final Label statusLabel = new Label();
+    private final Label timerLabel = new Label();
+    private final Label questionLabel = new Label();
+    private final Label helperOutputLabel = new Label();
+    private final Button[] optionButtons = new Button[4];
+
+    // Segítségek - Nincs pontlevonás
+    private final Button tipBtn = new Button("💡 Tipp");
+    private final Button probBtn = new Button("📊 Esélyek %");
+    private final Button halfBtn = new Button("✂ Felező");
+    private final Button walkAwayBtn = new Button("💼 Megállok");
+
+    public GameTabView(QuestionRepository questionRepository, ScoreRepository scoreRepository,
+                       GameEngineService gameEngine, GameTimerService timerService,
+                       SoundEffectService soundService, Runnable onScoreSavedCallback) {
+        this.questionRepository = questionRepository;
+        this.scoreRepository = scoreRepository;
+        this.gameEngine = gameEngine;
+        this.timerService = timerService;
+        this.soundService = soundService;
+        this.onScoreSavedCallback = onScoreSavedCallback;
+
+        buildRegistrationView();
+        buildQuizView();
+
+        getChildren().addAll(studioBackdrop, registrationPane, quizPane);
+        showRegistration();
+    }
+
+    private void buildRegistrationView() {
+        registrationPane.setAlignment(Pos.CENTER);
+        registrationPane.setMaxSize(490, 260);
+        registrationPane.setPadding(new Insets(24, 28, 26, 28));
+        registrationPane.getStyleClass().add("glass-panel");
+
+        Label title = new Label("LEGYEN ÖN IS MILLIOMOS!");
+        title.setFont(Font.font("Arial Black", FontWeight.EXTRA_BOLD, 22));
+        title.setStyle("-fx-text-fill: #f5af19;");
+
+        Label subTitle = new Label("15 kérdés, 90 másodperc minden kérdésre.\nFőnyeremény: 40 000 000 Ft!");
+        subTitle.setTextAlignment(TextAlignment.CENTER);
+        subTitle.setStyle("-fx-text-fill: #c4d7ed; -fx-font-size: 13.5px;");
+
+        TextField nameField = new TextField();
+        nameField.setPromptText("Add meg a játékosneved...");
+        nameField.setMaxWidth(310);
+        nameField.setStyle("-fx-font-size: 14.5px; -fx-background-radius: 0; -fx-border-color: #3b6aa0; -fx-border-width: 1.5; -fx-border-radius: 0; -fx-padding: 8 14; -fx-text-fill: #ffffff; -fx-control-inner-background: #08142c;");
+
+        Button startBtn = new Button("🎬 Játék indítása");
+        startBtn.getStyleClass().add("answer-button");
+        startBtn.setPrefSize(340, 48);
+
+        startBtn.setOnAction(e -> {
+            String playerName = nameField.getText().trim();
+            if (playerName.isEmpty()) {
+                showAlert("Hiba", "Kérlek, adj meg egy nevet a játékhoz!");
+                return;
+            }
+            if (!gameEngine.startNewGame(playerName, questionRepository.findAll())) {
+                showAlert("Hiányzó kérdések", "Legalább 15 kérdésnek kell lennie a questions.json fájlban!");
+                return;
+            }
+            soundService.playLifeline();
+            startQuizSession();
+        });
+
+        registrationPane.getChildren().addAll(title, subTitle, nameField, startBtn);
+    }
+
+    private void buildQuizView() {
+        quizPane.setPadding(new Insets(12, 20, 16, 20));
+
+        // --- FELSŐ HUD SÁV ---
+        BorderPane topHud = new BorderPane();
+        topHud.getStyleClass().add("glass-panel");
+        topHud.setPadding(new Insets(8, 18, 8, 18));
+
+        statusLabel.setStyle("-fx-text-fill: #ffffff; -fx-font-size: 14px; -fx-font-weight: bold;");
+        timerLabel.setStyle("-fx-text-fill: #f5af19; -fx-font-size: 17px; -fx-font-weight: bold;");
+
+        // Időzítő figyelő: 90 mp kérdésenként
+        timerService.remainingSecondsProperty().addListener((obs, oldVal, newVal) -> {
+            int secs = newVal.intValue();
+            timerLabel.setText("⏱ Idő: " + secs + " mp");
+            if (secs <= 15) {
+                timerLabel.setStyle("-fx-text-fill: #ff3b30; -fx-font-size: 17px; -fx-font-weight: bold;");
+            } else {
+                timerLabel.setStyle("-fx-text-fill: #f5af19; -fx-font-size: 17px; -fx-font-weight: bold;");
+            }
+            if (quizPane.isVisible() && secs > 0) {
+                soundService.playTick();
+            }
+        });
+
+        tipBtn.getStyleClass().add("lifeline-button");
+        probBtn.getStyleClass().add("lifeline-button");
+        halfBtn.getStyleClass().add("lifeline-button");
+        walkAwayBtn.getStyleClass().addAll("lifeline-button", "walk-away-button");
+
+        walkAwayBtn.setOnAction(e -> handleWalkAway());
+
+        HBox lifelinesBox = new HBox(10, tipBtn, probBtn, halfBtn, walkAwayBtn);
+        lifelinesBox.setAlignment(Pos.CENTER);
+
+        topHud.setLeft(statusLabel);
+        topHud.setCenter(lifelinesBox);
+        topHud.setRight(timerLabel);
+        BorderPane.setAlignment(statusLabel, Pos.CENTER_LEFT);
+        BorderPane.setAlignment(timerLabel, Pos.CENTER_RIGHT);
+
+        quizPane.setTop(topHud);
+
+        // --- Segítségek eseménykezelői (Pontlevonás NÉLKÜL) ---
+        tipBtn.setOnAction(e -> {
+            String tip = gameEngine.useTipHelp();
+            if (tip != null) {
+                soundService.playLifeline();
+                helperOutputLabel.setText("💡 Műsorvezetői tipp: " + tip);
+                tipBtn.setDisable(true);
+                updateHeaderStats();
+            }
+        });
+
+        probBtn.setOnAction(e -> {
+            List<Integer> probs = gameEngine.useProbabilitiesHelp();
+            if (probs != null && probs.size() == 4) {
+                soundService.playLifeline();
+                audienceChartPane.showProbabilities(probs);
+                probBtn.setDisable(true);
+                updateHeaderStats();
+            }
+        });
+
+        halfBtn.setOnAction(e -> {
+            List<Integer> toHide = gameEngine.useHalvingHelp();
+            if (toHide != null) {
+                soundService.playLifeline();
+                for (int idx : toHide) {
+                    optionButtons[idx].setDisable(true);
+                }
+                halfBtn.setDisable(true);
+                updateHeaderStats();
+            }
+        });
+
+        // --- KÖZÉPSŐ/ALSÓ KVÍZ PULT - SZÖGLETES MEZŐK ÉS HORIZONTÁLIS CSATLAKOZÓ VONALAK ---
+        VBox bottomConsole = new VBox(10);
+        bottomConsole.setAlignment(Pos.BOTTOM_CENTER);
+        bottomConsole.setPadding(new Insets(10, 10, 0, 0));
+
+        helperOutputLabel.setStyle("-fx-text-fill: #00d2ff; -fx-font-size: 14px; -fx-font-weight: bold;");
+
+        // Szögletes kérdés mező: Dinamikusan nő, ha több soros a kérdés
+        questionLabel.getStyleClass().add("question-banner");
+        questionLabel.setPrefWidth(680);
+        questionLabel.setMaxWidth(680);
+        questionLabel.setMinHeight(56);
+        questionLabel.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        questionLabel.setMaxHeight(Double.MAX_VALUE);
+        questionLabel.setAlignment(Pos.CENTER);
+        questionLabel.setTextAlignment(TextAlignment.CENTER);
+        questionLabel.setWrapText(true);
+
+        Region qLeftLine = createConnectorLine();
+        Region qRightLine = createConnectorLine();
+        HBox.setHgrow(qLeftLine, Priority.ALWAYS);
+        HBox.setHgrow(qRightLine, Priority.ALWAYS);
+        HBox questionRow = new HBox(qLeftLine, questionLabel, qRightLine);
+        questionRow.setAlignment(Pos.CENTER);
+
+        // Szögletes válaszgombok: Tágasabb méret, egységes magasság
+        for (int i = 0; i < 4; i++) {
+            final int index = i;
+            Button btn = new Button();
+            btn.setPrefWidth(330);
+            btn.setMinWidth(310);
+            btn.setMaxWidth(350);
+            btn.setMinHeight(60);
+            btn.setPrefHeight(60);
+            btn.setMaxHeight(Double.MAX_VALUE);
+            btn.setWrapText(true);
+            btn.getStyleClass().add("answer-button");
+            btn.setOnAction(e -> handleAnswerSelection(index));
+            optionButtons[i] = btn;
+        }
+
+        // 1. válaszsor (A és B) horizontális összekötő vonalakkal
+        Region r1Left = createConnectorLine();
+        Region r1Mid = createConnectorLine();
+        Region r1Right = createConnectorLine();
+        HBox.setHgrow(r1Left, Priority.ALWAYS);
+        HBox.setHgrow(r1Right, Priority.ALWAYS);
+        r1Mid.setPrefWidth(16);
+        r1Mid.setMinWidth(10);
+        HBox row1 = new HBox(r1Left, optionButtons[0], r1Mid, optionButtons[1], r1Right);
+        row1.setAlignment(Pos.CENTER);
+
+        // 2. válaszsor (C és D) horizontális összekötő vonalakkal
+        Region r2Left = createConnectorLine();
+        Region r2Mid = createConnectorLine();
+        Region r2Right = createConnectorLine();
+        HBox.setHgrow(r2Left, Priority.ALWAYS);
+        HBox.setHgrow(r2Right, Priority.ALWAYS);
+        r2Mid.setPrefWidth(16);
+        r2Mid.setMinWidth(10);
+        HBox row2 = new HBox(r2Left, optionButtons[2], r2Mid, optionButtons[3], r2Right);
+        row2.setAlignment(Pos.CENTER);
+
+        VBox answersContainer = new VBox(10, row1, row2);
+        answersContainer.setAlignment(Pos.CENTER);
+
+        bottomConsole.getChildren().addAll(audienceChartPane, helperOutputLabel, questionRow, answersContainer);
+        quizPane.setCenter(bottomConsole);
+
+        // --- JOBB OLDALI 15 LÉPCSŐS NYEREMÉNYFA ---
+        BorderPane.setMargin(prizeLadderPane, new Insets(12, 0, 0, 10));
+        quizPane.setRight(prizeLadderPane);
+    }
+
+    private Region createConnectorLine() {
+        Region line = new Region();
+        line.setPrefHeight(2);
+        line.setMinHeight(2);
+        line.setMaxHeight(2);
+        line.getStyleClass().add("tv-connector-line");
+        return line;
+    }
+
+    private void startQuizSession() {
+        registrationPane.setVisible(false);
+        quizPane.setVisible(true);
+        tipBtn.setDisable(false);
+        probBtn.setDisable(false);
+        halfBtn.setDisable(false);
+
+        timerService.startTotalGameStopwatch();
+        loadCurrentQuestionToUI();
+    }
+
+    private void loadCurrentQuestionToUI() {
+        int currentNum = gameEngine.getCurrentQuestionNumber();
+        updateHeaderStats();
+        prizeLadderPane.updateCurrentStep(currentNum);
+        walkAwayBtn.setDisable(!gameEngine.canWalkAway());
+        helperOutputLabel.setText("");
+        audienceChartPane.hideChart();
+
+        Question q = gameEngine.getCurrentQuestion();
+        questionLabel.setText(currentNum + ". KÉRDÉS: " + q.getQuestionText());
+
+        // Pontos szövegszélesség mérés 15px félkövér betűmérettel
+        Text measureText = new Text();
+        measureText.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
+
+        int maxLines = 1;
+        String[] prefixes = {"♦ A: ", "♦ B: ", "♦ C: ", "♦ D: "};
+        for (int i = 0; i < 4; i++) {
+            String optText = q.getOptions().get(i);
+            String fullText = prefixes[i] + optText;
+            measureText.setText(fullText);
+            double w = measureText.getLayoutBounds().getWidth();
+            // A gomb belső hasznos szélessége csúcsokkal kb. 245-250px
+            if (w > 490.0) {
+                maxLines = Math.max(maxLines, 3);
+            } else if (w > 245.0) {
+                maxLines = Math.max(maxLines, 2);
+            }
+            optionButtons[i].getStyleClass().removeAll("answer-selected", "answer-correct", "answer-wrong");
+            optionButtons[i].setText(fullText);
+            optionButtons[i].setDisable(false);
+        }
+
+        // Ha bármelyik válasz nem fér ki 1 sorban, mind a 4 mező magassága növekszik egységesen
+        double uniformBtnHeight = 54.0;
+        if (maxLines >= 3) {
+            uniformBtnHeight = 92.0;
+        } else if (maxLines == 2) {
+            uniformBtnHeight = 72.0;
+        }
+        for (Button btn : optionButtons) {
+            btn.setMinHeight(uniformBtnHeight);
+            btn.setPrefHeight(uniformBtnHeight);
+            btn.setMaxHeight(uniformBtnHeight);
+        }
+
+        // 90 másodperc minden kérdésre külön-külön
+        timerService.startQuestionTimer(() -> Platform.runLater(this::handleQuestionTimeout));
+    }
+
+    private void handleQuestionTimeout() {
+        soundService.playWrong();
+        gameEngine.applyWrongAnswerDrop();
+        finishGame("Lejárt a 90 másodperces időkorlát erre a kérdésre! Visszaestél a legutóbbi garantált nyereményre.");
+    }
+
+    private void handleWalkAway() {
+        if (!gameEngine.canWalkAway()) return;
+
+        timerService.stop();
+        walkAwayBtn.setDisable(true);
+        for (Button btn : optionButtons) {
+            btn.setDisable(true);
+        }
+
+        int correctIndex = gameEngine.getCurrentQuestion().getCorrectOptionIndex();
+        optionButtons[correctIndex].getStyleClass().add("answer-correct");
+        soundService.playWalkAway();
+
+        PauseTransition revealPause = new PauseTransition(Duration.seconds(0.8));
+        revealPause.setOnFinished(e -> finishGame("Megálltál! Biztonságban elvitted az eddig megszerzett nyereményt."));
+        revealPause.play();
+    }
+
+    private void handleAnswerSelection(int selectedIndex) {
+        // A válasz megjelölésekor az óra azonnal megáll
+        timerService.stop();
+        walkAwayBtn.setDisable(true);
+        for (Button btn : optionButtons) {
+            btn.setDisable(true);
+        }
+
+        int correctIndex = gameEngine.getCurrentQuestion().getCorrectOptionIndex();
+        Button selectedBtn = optionButtons[selectedIndex];
+        selectedBtn.getStyleClass().add("answer-selected");
+        soundService.playSelect();
+
+        PauseTransition suspensePause = new PauseTransition(Duration.seconds(0.7));
+        suspensePause.setOnFinished(e -> {
+            selectedBtn.getStyleClass().remove("answer-selected");
+            boolean correct = gameEngine.submitAnswer(selectedIndex);
+
+            if (correct) {
+                selectedBtn.getStyleClass().add("answer-correct");
+                if (gameEngine.isVictory()) {
+                    prizeLadderPane.updateCurrentStep(GameEngineService.MAX_QUESTIONS + 1);
+                    soundService.playVictory();
+                } else {
+                    soundService.playCorrect();
+                }
+            } else {
+                selectedBtn.getStyleClass().add("answer-wrong");
+                optionButtons[correctIndex].getStyleClass().add("answer-correct");
+                soundService.playWrong();
+            }
+
+            PauseTransition resultPause = new PauseTransition(Duration.seconds(0.85));
+            resultPause.setOnFinished(ev -> {
+                if (!quizPane.isVisible()) return;
+                if (!correct) {
+                    finishGame("Helytelen válasz! Visszaestél a legutóbbi garantált nyereményre.");
+                } else if (gameEngine.isVictory()) {
+                    finishGame("Gratulálunk! Mind a 15 kérdésre helyesen válaszoltál és megnyerted a 40 000 000 Ft főnyereményt!");
+                } else {
+                    loadCurrentQuestionToUI();
+                }
+            });
+            resultPause.play();
+        });
+        suspensePause.play();
+    }
+
+    private void updateHeaderStats() {
+        int currentNum = Math.min(15, gameEngine.getCurrentQuestionNumber());
+        int currentStake = scoreCalculator.calculateQuestionReward(currentNum - 1);
+        int currentWon = gameEngine.getAccumulatedAnswerPoints();
+        statusLabel.setText(String.format("Kérdés: %d/15   |   Eddigi nyeremény: %s   |   Kérdés tétje: %s",
+                currentNum,
+                ScoreCalculator.formatFt(currentWon),
+                ScoreCalculator.formatFt(currentStake)));
+    }
+
+    private void finishGame(String titleMessage) {
+        timerService.stop();
+        timerService.stopTotalGameStopwatch();
+        int totalElapsed = timerService.getTotalElapsedSeconds();
+
+        ScoreRecord record = gameEngine.buildScoreRecord(totalElapsed);
+        scoreRepository.saveScore(record);
+        onScoreSavedCallback.run();
+
+        int wonPrize = record.getFinalScore();
+        int answeredCount = Math.max(0, gameEngine.getCurrentQuestionNumber() - 1);
+
+        Platform.runLater(() -> {
+            showResultDialog(titleMessage, wonPrize, answeredCount, totalElapsed);
+            showRegistration();
+        });
+    }
+
+    private void showRegistration() {
+        quizPane.setVisible(false);
+        registrationPane.setVisible(true);
+    }
+
+    private void showResultDialog(String statusMessage, int wonPrize, int answeredCount, int totalElapsed) {
+        Alert alert = new Alert(Alert.AlertType.NONE);
+        alert.initStyle(StageStyle.UNDECORATED);
+        if (getScene() != null && getScene().getWindow() != null) {
+            alert.initOwner(getScene().getWindow());
+        }
+
+        DialogPane dialogPane = alert.getDialogPane();
+        dialogPane.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        dialogPane.getStyleClass().add("studio-dialog");
+        dialogPane.setPrefWidth(480);
+
+        Label headerLabel = new Label("🏆 JÁTÉK VÉGE – ÖSSZESÍTÉS");
+        headerLabel.getStyleClass().add("studio-dialog-title");
+
+        Label messageLabel = new Label(statusMessage);
+        messageLabel.getStyleClass().add("studio-dialog-message");
+        messageLabel.setWrapText(true);
+        messageLabel.setTextAlignment(TextAlignment.CENTER);
+        messageLabel.setAlignment(Pos.CENTER);
+        messageLabel.setMaxWidth(420);
+
+        VBox statsBox = new VBox(8,
+                createStatRow("Megnyert nyeremény:", ScoreCalculator.formatFt(wonPrize)),
+                createStatRow("Megválaszolt kérdések:", answeredCount + " / 15"),
+                createStatRow("Összes eltelt játékidő:", ScoreCalculator.formatDuration(totalElapsed))
+        );
+        statsBox.getStyleClass().add("studio-stats-box");
+
+        Label finalPrizeBanner = new Label("♦ VÉGSŐ NYEREMÉNY: " + ScoreCalculator.formatFt(wonPrize));
+        finalPrizeBanner.getStyleClass().add("studio-final-prize-banner");
+        finalPrizeBanner.setAlignment(Pos.CENTER);
+        finalPrizeBanner.setMaxWidth(Double.MAX_VALUE);
+
+        VBox contentBox = new VBox(14, headerLabel, messageLabel, statsBox, finalPrizeBanner);
+        contentBox.setAlignment(Pos.CENTER);
+        dialogPane.setContent(contentBox);
+
+        ButtonType closeType = new ButtonType("♦ Tovább", ButtonBar.ButtonData.OK_DONE);
+        dialogPane.getButtonTypes().add(closeType);
+
+        Button closeBtn = (Button) dialogPane.lookupButton(closeType);
+        closeBtn.getStyleClass().add("answer-button");
+        closeBtn.setPrefSize(240, 46);
+
+        alert.showAndWait();
+    }
+
+    private HBox createStatRow(String labelText, String valueText) {
+        Label left = new Label(labelText);
+        left.getStyleClass().add("studio-stat-label");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Label right = new Label(valueText);
+        right.getStyleClass().add("studio-stat-value");
+
+        HBox row = new HBox(10, left, spacer, right);
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
+    }
+
+    private void showAlert(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.NONE);
+        alert.initStyle(StageStyle.UNDECORATED);
+        if (getScene() != null && getScene().getWindow() != null) {
+            alert.initOwner(getScene().getWindow());
+        }
+
+        DialogPane dialogPane = alert.getDialogPane();
+        dialogPane.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        dialogPane.getStyleClass().add("studio-dialog");
+        dialogPane.setPrefWidth(420);
+
+        Label titleLabel = new Label(title.toUpperCase());
+        titleLabel.getStyleClass().add("studio-dialog-title");
+
+        Label contentLabel = new Label(content);
+        contentLabel.getStyleClass().add("studio-dialog-message");
+        contentLabel.setWrapText(true);
+        contentLabel.setTextAlignment(TextAlignment.CENTER);
+        contentLabel.setAlignment(Pos.CENTER);
+        contentLabel.setMaxWidth(370);
+
+        VBox box = new VBox(14, titleLabel, contentLabel);
+        box.setAlignment(Pos.CENTER);
+        dialogPane.setContent(box);
+
+        ButtonType okType = new ButtonType("♦ Rendben", ButtonBar.ButtonData.OK_DONE);
+        dialogPane.getButtonTypes().add(okType);
+
+        Button okBtn = (Button) dialogPane.lookupButton(okType);
+        okBtn.getStyleClass().add("answer-button");
+        okBtn.setPrefSize(210, 44);
+
+        alert.showAndWait();
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/ui/PrizeLadderPane.java">
+package hu.milliomos.ui;
+
+import hu.milliomos.service.GameEngineService;
+import hu.milliomos.service.ScoreCalculator;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
+
+/**
+ * 15 lépcsős nyereményfa a hivatalos Forint értékekkel:
+ * 5. és 10. szint: Garantált mérföldkő (100 000 Ft, 1 500 000 Ft)
+ * 15. szint: Főnyeremény (40 000 000 Ft)
+ */
+public class PrizeLadderPane extends VBox {
+    private final HBox[] stepRows = new HBox[GameEngineService.MAX_QUESTIONS];
+
+    public PrizeLadderPane(ScoreCalculator scoreCalculator) {
+        setSpacing(3.5);
+        setPadding(new Insets(10, 12, 10, 12));
+        setPrefWidth(215);
+        setMaxWidth(215);
+        setAlignment(Pos.CENTER);
+        getStyleClass().addAll("glass-panel", "prize-ladder");
+
+        Label header = new Label("🏆 NYEREMÉNYFA");
+        header.setStyle("-fx-text-fill: #f5af19; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 0 0 4 0;");
+        getChildren().add(header);
+
+        for (int i = GameEngineService.MAX_QUESTIONS - 1; i >= 0; i--) {
+            int questionNum = i + 1;
+            int reward = scoreCalculator.calculateQuestionReward(i);
+            boolean isMilestone = (questionNum == 5 || questionNum == 10 || questionNum == 15);
+
+            HBox row = new HBox(6);
+            row.setAlignment(Pos.CENTER_LEFT);
+            row.setPadding(new Insets(2, 8, 2, 8));
+            row.getStyleClass().add("ladder-step");
+            if (isMilestone) {
+                row.getStyleClass().add("ladder-step-milestone");
+            }
+
+            Label numLabel = new Label(String.format("%2d.", questionNum));
+            numLabel.getStyleClass().add("ladder-text");
+
+            Label diamondLabel = new Label("♦");
+            diamondLabel.setStyle(isMilestone
+                    ? "-fx-text-fill: #ffffff; -fx-font-size: 10px;"
+                    : "-fx-text-fill: #f5af19; -fx-font-size: 10px;");
+
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, Priority.ALWAYS);
+
+            Label pointsLabel = new Label(ScoreCalculator.formatFt(reward));
+            pointsLabel.getStyleClass().add("ladder-text");
+
+            row.getChildren().addAll(numLabel, diamondLabel, spacer, pointsLabel);
+            stepRows[i] = row;
+            getChildren().add(row);
+        }
+    }
+
+    public void updateCurrentStep(int currentQuestionNumber) {
+        int currentIndex = currentQuestionNumber - 1;
+        for (int i = 0; i < GameEngineService.MAX_QUESTIONS; i++) {
+            HBox row = stepRows[i];
+            row.getStyleClass().removeAll("ladder-step-current", "ladder-step-passed");
+
+            if (i < currentIndex) {
+                row.getStyleClass().add("ladder-step-passed");
+            } else if (i == currentIndex) {
+                row.getStyleClass().add("ladder-step-current");
+            }
+        }
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/ui/ScoreboardTabView.java">
+package hu.milliomos.ui;
+
+import hu.milliomos.model.ScoreRecord;
+import hu.milliomos.repository.ScoreRepository;
+import hu.milliomos.service.ScoreCalculator;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.geometry.Insets;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+
+public class ScoreboardTabView extends BorderPane {
+    private final ScoreRepository scoreRepository;
+    private final TableView<ScoreRecord> table = new TableView<>();
+
+    public ScoreboardTabView(ScoreRepository scoreRepository) {
+        this.scoreRepository = scoreRepository;
+        setPadding(new Insets(15));
+
+        Label title = new Label("🏆 Legyen Ön is Milliomos - Eredménytábla");
+        title.setFont(Font.font("System", FontWeight.BOLD, 20));
+        title.setPadding(new Insets(0, 0, 10, 0));
+        setTop(title);
+
+        setupColumns();
+        setCenter(table);
+        refreshTable();
+    }
+
+    private void setupColumns() {
+        TableColumn<ScoreRecord, String> nameCol = new TableColumn<>("Játékos neve");
+        nameCol.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getPlayerName()));
+        nameCol.setPrefWidth(200);
+
+        TableColumn<ScoreRecord, String> prizeCol = new TableColumn<>("Megnyert Nyeremény");
+        prizeCol.setCellValueFactory(c -> new SimpleStringProperty(ScoreCalculator.formatFt(c.getValue().getFinalScore())));
+        prizeCol.setPrefWidth(240);
+
+        TableColumn<ScoreRecord, String> timeCol = new TableColumn<>("Összes eltelt idő");
+        timeCol.setCellValueFactory(c -> new SimpleStringProperty(
+                ScoreCalculator.formatDuration(c.getValue().getTotalElapsedSeconds())));
+        timeCol.setPrefWidth(180);
+
+        TableColumn<ScoreRecord, String> dateCol = new TableColumn<>("Dátum");
+        dateCol.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getPlayedAt()));
+        dateCol.setPrefWidth(180);
+
+        table.getColumns().addAll(nameCol, prizeCol, timeCol, dateCol);
+    }
+
+    public void refreshTable() {
+        table.setItems(FXCollections.observableArrayList(scoreRepository.findAllSorted()));
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/ui/StudioBackdropPane.java">
+package hu.milliomos.ui;
+
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
+import javafx.scene.Group;
+import javafx.scene.Node;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.*;
+import javafx.scene.shape.*;
+import javafx.util.Duration;
+
+import java.io.File;
+import java.io.InputStream;
+import java.util.ArrayDeque;
+import java.util.Queue;
+
+/**
+ * Valódi "Legyen Ön is milliomos" TV-stúdió háttér:
+ * - Tiszta sötétkék stúdióháttér (vízszintes és oldalsó sávok nélkül)
+ * - Középen az autentikus "MILLIOMOS" logó a mellékelt képből
+ * - Két oldalon a játékosok karaktere (characters.png)
+ * - Ovális asztal szimbólumok nélkül
+ */
+public class StudioBackdropPane extends Pane {
+
+    private static final String[] COMBINED_IMAGE_PATHS = {"/characters.png", "/characters.jpg"};
+
+    private ImageView logoView;
+    private final Group hostCharacter;
+    private final Group playerCharacter;
+
+    public StudioBackdropPane() {
+        setPrefSize(960, 650);
+        setStyle("-fx-background-color: #04091a;");
+
+        // 1. Középső embléma a csatolt képből
+        Image logoImg = loadLogoImage();
+        if (logoImg != null) {
+            logoView = new ImageView(logoImg);
+            logoView.setFitWidth(310);
+            logoView.setFitHeight(310);
+            logoView.setPreserveRatio(true);
+            logoView.setSmooth(true);
+            getChildren().add(logoView);
+        }
+
+        // 2. Karakterek betöltése (characters.png)
+        hostCharacter = loadCharacterGroup(true, 215, 230, 260, Color.web("#00d2ff"), Color.web("#1a2a6c"));
+        playerCharacter = loadCharacterGroup(false, 230, 690, 260, Color.web("#f5af19"), Color.web("#3a1c71"));
+
+        getChildren().addAll(hostCharacter, playerCharacter);
+
+        widthProperty().addListener((obs, oldV, newV) -> updateLayoutPositions(newV.doubleValue(), getHeight()));
+        heightProperty().addListener((obs, oldV, newV) -> updateLayoutPositions(getWidth(), newV.doubleValue()));
+
+        startAmbientAnimations(hostCharacter, playerCharacter);
+    }
+
+    private Image loadLogoImage() {
+        try (InputStream is = getClass().getResourceAsStream("/logo.png")) {
+            if (is != null) {
+                return new Image(is);
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            File f = new File("src/main/resources/logo.png");
+            if (f.exists()) {
+                return new Image(f.toURI().toString());
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private Group loadCharacterGroup(boolean isHost, double targetHeight, double x, double y,
+                                     Color accentNeon, Color suitColor) {
+        String singlePath = isHost ? "/kobold_host.png" : "/dragonborn_player.png";
+        try (InputStream is = getClass().getResourceAsStream(singlePath)) {
+            if (is != null) {
+                Image rawImg = new Image(is);
+                Image cleanImg = autoCropAndRemoveWhiteBg(rawImg, 0, (int) rawImg.getWidth(), isHost);
+                return buildImageRig(cleanImg, targetHeight, x, y);
+            }
+        } catch (Exception ignored) {
+        }
+
+        for (String combinedPath : COMBINED_IMAGE_PATHS) {
+            try (InputStream is = getClass().getResourceAsStream(combinedPath)) {
+                if (is != null) {
+                    Image fullImg = new Image(is);
+                    int fullW = (int) fullImg.getWidth();
+                    if (fullW > 0) {
+                        int startX = isHost ? 0 : fullW / 2;
+                        int subW = isHost ? (fullW / 2) : (fullW - startX);
+                        Image croppedChar = autoCropAndRemoveWhiteBg(fullImg, startX, subW, isHost);
+                        return buildImageRig(croppedChar, targetHeight, x, y);
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        try {
+            File f = new File("src/main/resources/characters.png");
+            if (f.exists()) {
+                Image fullImg = new Image(f.toURI().toString());
+                int fullW = (int) fullImg.getWidth();
+                if (fullW > 0) {
+                    int startX = isHost ? 0 : fullW / 2;
+                    int subW = isHost ? (fullW / 2) : (fullW - startX);
+                    Image croppedChar = autoCropAndRemoveWhiteBg(fullImg, startX, subW, isHost);
+                    return buildImageRig(croppedChar, targetHeight, x, y);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        // Tartalék vektoros figura, ha a kép nem érhető el
+        return createCharacterRig(x, y, accentNeon, suitColor, isHost);
+    }
+
+    private Image autoCropAndRemoveWhiteBg(Image src, int offsetX, int width, boolean isHost) {
+        int height = (int) src.getHeight();
+        PixelReader reader = src.getPixelReader();
+        if (reader == null || width <= 0 || height <= 0) return src;
+
+        boolean[][] transparent = new boolean[width][height];
+        Queue<int[]> queue = new ArrayDeque<>();
+
+        for (int x = 0; x < width; x++) {
+            queue.add(new int[]{x, 0});
+            queue.add(new int[]{x, height - 1});
+        }
+        for (int y = 0; y < height; y++) {
+            queue.add(new int[]{0, y});
+            queue.add(new int[]{width - 1, y});
+        }
+
+        while (!queue.isEmpty()) {
+            int[] p = queue.poll();
+            int x = p[0], y = p[1];
+            if (x < 0 || x >= width || y < 0 || y >= height || transparent[x][y]) continue;
+
+            boolean isCornerWatermark = !isHost && (x > width * 0.82 && y > height * 0.88);
+            Color c = reader.getColor(offsetX + x, y);
+
+            if (isCornerWatermark || isBackgroundWhite(c, 0.88)) {
+                transparent[x][y] = true;
+                queue.add(new int[]{x + 1, y});
+                queue.add(new int[]{x - 1, y});
+                queue.add(new int[]{x, y + 1});
+                queue.add(new int[]{x, y - 1});
+            }
+        }
+
+        int minX = width, minY = height, maxX = 0, maxY = 0;
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                if (!transparent[x][y]) {
+                    Color c = reader.getColor(offsetX + x, y);
+                    boolean inKoboldShirtZone = isHost
+                            && (x > width * 0.20 && x < width * 0.65)
+                            && (y > height * 0.35 && y < height * 0.62);
+
+                    if (!inKoboldShirtZone && isBackgroundWhite(c, 0.94)) {
+                        transparent[x][y] = true;
+                    }
+                }
+
+                if (!transparent[x][y]) {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+        }
+
+        if (maxX <= minX || maxY <= minY) return src;
+
+        int cropW = maxX - minX + 1;
+        int cropH = maxY - minY + 1;
+        WritableImage out = new WritableImage(cropW, cropH);
+        PixelWriter writer = out.getPixelWriter();
+
+        for (int y = 0; y < cropH; y++) {
+            for (int x = 0; x < cropW; x++) {
+                int srcX = minX + x;
+                int srcY = minY + y;
+                if (transparent[srcX][srcY]) {
+                    writer.setArgb(x, y, 0x00000000);
+                } else {
+                    writer.setColor(x, y, reader.getColor(offsetX + srcX, srcY));
+                }
+            }
+        }
+        return out;
+    }
+
+    private boolean isBackgroundWhite(Color c, double threshold) {
+        if (c.getOpacity() < 0.1) return true;
+        return c.getRed() >= threshold
+                && c.getGreen() >= threshold
+                && c.getBlue() >= threshold
+                && Math.abs(c.getRed() - c.getGreen()) < 0.06
+                && Math.abs(c.getGreen() - c.getBlue()) < 0.06;
+    }
+
+    private Group buildImageRig(Image img, double targetHeight, double x, double y) {
+        ImageView iv = new ImageView(img);
+        iv.setFitHeight(targetHeight);
+        iv.setPreserveRatio(true);
+        iv.setSmooth(true);
+
+        double renderedWidth = (img.getHeight() > 0)
+                ? (img.getWidth() / img.getHeight()) * targetHeight
+                : targetHeight * 0.85;
+
+        iv.setTranslateX(-renderedWidth / 2.0);
+        iv.setTranslateY(-targetHeight * 0.62);
+
+        Group spriteGroup = new Group(iv);
+        Group rig = new Group(spriteGroup);
+        rig.setTranslateX(x);
+        rig.setTranslateY(y);
+        return rig;
+    }
+
+    private Group createCharacterRig(double x, double y, Color accentNeon, Color suitColor, boolean facingRight) {
+        Group rig = new Group();
+        rig.setTranslateX(x);
+        rig.setTranslateY(y);
+
+        int dir = facingRight ? 1 : -1;
+        Group bodyGroup = new Group();
+        Polygon torso = new Polygon(-35, 45, 35, 45, 26, -15, -26, -15);
+        torso.setFill(suitColor);
+        torso.setStroke(accentNeon);
+        torso.setStrokeWidth(1.5);
+
+        Polygon collar = new Polygon(-8, -15, 8, -15, 0, 12);
+        collar.setFill(Color.web("#e6f2ff"));
+
+        Circle head = new Circle(0, -38, 20);
+        head.setFill(Color.web("#d9a17c"));
+
+        Path arm = new Path(new MoveTo(dir * 12, -5), new LineTo(dir * 32, 18), new LineTo(dir * 52, 12));
+        arm.setStroke(suitColor);
+        arm.setStrokeWidth(11);
+        arm.setStrokeLineCap(StrokeLineCap.ROUND);
+
+        bodyGroup.getChildren().addAll(torso, collar, arm, head);
+        rig.getChildren().add(bodyGroup);
+        return rig;
+    }
+
+    private void updateLayoutPositions(double w, double h) {
+        double centerX = w / 2.0;
+        double stageY = h * 0.40;
+
+        if (logoView != null) {
+            logoView.setTranslateX(centerX - 155.0);
+            logoView.setTranslateY(stageY - 150.0);
+        }
+
+        hostCharacter.setTranslateX(centerX - 215.0);
+        hostCharacter.setTranslateY(stageY - 10.0);
+
+        playerCharacter.setTranslateX(centerX + 215.0);
+        playerCharacter.setTranslateY(stageY - 10.0);
+    }
+
+    private void startAmbientAnimations(Group host, Group player) {
+        if (!host.getChildren().isEmpty() && !player.getChildren().isEmpty()) {
+            Node hostBody = host.getChildren().get(0);
+            Node playerBody = player.getChildren().get(0);
+
+            Timeline idleTimeline = new Timeline(
+                    new KeyFrame(Duration.ZERO,
+                            new KeyValue(hostBody.translateYProperty(), 0),
+                            new KeyValue(playerBody.translateYProperty(), -3)),
+                    new KeyFrame(Duration.seconds(2.2),
+                            new KeyValue(hostBody.translateYProperty(), -4),
+                            new KeyValue(playerBody.translateYProperty(), 1))
+            );
+            idleTimeline.setAutoReverse(true);
+            idleTimeline.setCycleCount(Animation.INDEFINITE);
+            idleTimeline.play();
+        }
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/Launcher.java">
+package hu.milliomos;
+
+public class Launcher {
+    public static void main(String[] args) {
+        MainApp.main(args);
+    }
+}
+</file>
+
+<file path="src/main/java/hu/milliomos/MainApp.java">
+package hu.milliomos;
+
+import hu.milliomos.repository.QuestionRepository;
+import hu.milliomos.repository.ScoreRepository;
+import hu.milliomos.service.GameEngineService;
+import hu.milliomos.service.GameTimerService;
+import hu.milliomos.service.ScoreCalculator;
+import hu.milliomos.service.SoundEffectService;
+import hu.milliomos.ui.EditorTabView;
+import hu.milliomos.ui.GameTabView;
+import hu.milliomos.ui.ScoreboardTabView;
+import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
+
+public class MainApp extends Application {
+
+    @Override
+    public void start(Stage primaryStage) {
+        QuestionRepository questionRepository = new QuestionRepository();
+        ScoreRepository scoreRepository = new ScoreRepository();
+        ScoreCalculator scoreCalculator = new ScoreCalculator();
+        GameTimerService timerService = new GameTimerService();
+        GameEngineService gameEngine = new GameEngineService(scoreCalculator);
+        SoundEffectService soundService = new SoundEffectService();
+
+        ScoreboardTabView scoreboardView = new ScoreboardTabView(scoreRepository);
+        GameTabView gameView = new GameTabView(
+                questionRepository,
+                scoreRepository,
+                gameEngine,
+                timerService,
+                soundService,
+                scoreboardView::refreshTable
+        );
+        EditorTabView editorView = new EditorTabView(questionRepository);
+
+        TabPane tabPane = new TabPane();
+        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+
+        tabPane.getTabs().addAll(
+                new Tab("Játék", gameView),
+                new Tab("Eredmények", scoreboardView),
+                new Tab("Kérdésszerkesztő", editorView)
+        );
+
+        // Felső menüsávban lévő szögletes némító gomb
+        Button topMuteBtn = new Button("🔊");
+        topMuteBtn.getStyleClass().add("top-bar-mute-btn");
+        topMuteBtn.setTooltip(new Tooltip("Hang némítása / visszakapcsolása"));
+        topMuteBtn.setOnAction(e -> {
+            boolean newMuted = !soundService.isMuted();
+            soundService.setMuted(newMuted);
+            topMuteBtn.setText(newMuted ? "🔇" : "🔊");
+        });
+
+        StackPane root = new StackPane();
+        root.getChildren().addAll(tabPane, topMuteBtn);
+        StackPane.setAlignment(topMuteBtn, Pos.TOP_RIGHT);
+        StackPane.setMargin(topMuteBtn, new Insets(5, 14, 0, 0));
+
+        Scene scene = new Scene(root, 960, 650);
+        scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        primaryStage.setTitle("Legyen Ön is Milliomos - JavaFX Desktop");
+        primaryStage.setScene(scene);
+        primaryStage.setOnCloseRequest(e -> timerService.stop());
+        primaryStage.show();
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+}
+</file>
+
+<file path="src/main/resources/questions.json">
+[
+  {
+    "questionText": "Melyik bolygót nevezik a „Vörös Bolygónak” a Naprendszerben?",
+    "options": [
+      "Vénusz",
+      "Mars",
+      "Jupiter",
+      "Merkúr"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Felszínét nagy mennyiségű vas-oxid (rozsda) borítja, és a római hadistenről kapta a nevét.",
+    "probabilities": [10, 75, 10, 5]
+  },
+  {
+    "questionText": "Melyik szoftvertervezési alapelv mondja ki, hogy egy osztálynak csak egyetlen felelőssége legyen?",
+    "options": [
+      "Open-Closed Principle",
+      "Single Responsibility Principle",
+      "Liskov Substitution Principle",
+      "Dependency Inversion Principle"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "A rövidítése SRP, és a SOLID alapelvek legelső betűjét adja.",
+    "probabilities": [12, 70, 10, 8]
+  },
+  {
+    "questionText": "Melyik évben adta ki II. András magyar király az Aranybullát?",
+    "options": [
+      "1000",
+      "1241",
+      "1222",
+      "1301"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Az évszámban három darab kettes számjegy követi egymást.",
+    "probabilities": [10, 15, 65, 10]
+  },
+  {
+    "questionText": "Mi a kémiai vegyjele az aranynak a periódusos rendszerben?",
+    "options": [
+      "Au",
+      "Ag",
+      "Fe",
+      "Cu"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "A latin „Aurum” szóból ered a rövidítése.",
+    "probabilities": [80, 10, 5, 5]
+  },
+  {
+    "questionText": "Melyik a Föld legmélyebb ismert tengeri árka?",
+    "options": [
+      "Tonga-árok",
+      "Puerto Ricó-i árok",
+      "Jáva-árok",
+      "Mariana-árok"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "A Csendes-óceánban található, legmélyebb pontja a közel 11 kilométer mély Challenger-mélység.",
+    "probabilities": [8, 12, 10, 70]
+  },
+  {
+    "questionText": "Ki írta „Az ember tragédiája” című drámai költeményt?",
+    "options": [
+      "Katona József",
+      "Arany János",
+      "Madách Imre",
+      "Vörösmarty Mihály"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Alsósztregován élt és alkotott; művének főszereplői Ádám, Éva és Lucifer.",
+    "probabilities": [10, 10, 72, 8]
+  },
+  {
+    "questionText": "Mi a szerepe a processzorokban (CPU) található „Cache” memóriának?",
+    "options": [
+      "Gyors elérésű átmeneti adattárolás a magok számára",
+      "A monitor képfrissítésének analóg szinkronizálása",
+      "A tápegység feszültségingadozásának szűrése",
+      "A hálózati csomagok titkosítása"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "L1, L2 és L3 szintjei vannak, és drasztikusan csökkenti a RAM eléréséből fakadó várakozási időt.",
+    "probabilities": [68, 14, 10, 8]
+  },
+  {
+    "questionText": "Ki tervezte a tömegreteszes késleltetésű, 9x25 mm-es Mauser lőszert tüzelő magyar 39M géppisztolyt?",
+    "options": [
+      "Frommer Rudolf",
+      "Király Pál",
+      "Mannlicher Ferdinánd",
+      "Kucher József"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "A fegyvert a köznyelvben is a tervező vezetéknevén emlegették, később a Dominikai Köztársaságban is alkotott.",
+    "probabilities": [15, 60, 15, 10]
+  },
+  {
+    "questionText": "Melyik sejtszervecske felelős az eukarióta sejtek energiatermeléséért (ATP-szintézis)?",
+    "options": [
+      "Riboszóma",
+      "Golgi-készülék",
+      "Mitokondrium",
+      "Lizoszóma"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Gyakran nevezik a „sejt erőművének” is, és saját DNS-sel rendelkezik.",
+    "probabilities": [12, 13, 65, 10]
+  },
+  {
+    "questionText": "Melyik hegységünkben található Magyarország legmagasabb pontja, az 1014 méteres Kékes?",
+    "options": [
+      "Mátra",
+      "Bükk",
+      "Börzsöny",
+      "Zempléni-hegység"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Az Északi-középhegység része, Gyöngyös városától északra emelkedik.",
+    "probabilities": [78, 10, 7, 5]
+  },
+  {
+    "questionText": "Milyen mértékegységgel mérjük az elektromos ellenállást az SI-mértékegységrendszerben?",
+    "options": [
+      "Amper",
+      "Volt",
+      "Watt",
+      "Ohm"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "Jele a görög nagy ómega (Ω) betű.",
+    "probabilities": [10, 10, 15, 65]
+  },
+  {
+    "questionText": "Melyik kulcsszóval származtatható (örökölhető) egy osztály egy másik osztályból Java nyelvben?",
+    "options": [
+      "implements",
+      "extends",
+      "inherits",
+      "super"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Az interfészekhez az „implements” tartozik, az osztályok közötti kiterjesztéshez viszont ez a szó.",
+    "probabilities": [14, 72, 8, 6]
+  },
+  {
+    "questionText": "Ki festette a vatikáni Sixtus-kápolna híres mennyezetfreskóját?",
+    "options": [
+      "Leonardo da Vinci",
+      "Raffaello Sanzio",
+      "Michelangelo Buonarroti",
+      "Sandro Botticelli"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Ugyanez a reneszánsz mester faragta a firenzei Dávid-szobrot is.",
+    "probabilities": [15, 12, 63, 10]
+  },
+  {
+    "questionText": "Melyik ókori csata zajlott le Kr. e. 490-ben az athéniak és a támadó perzsák között?",
+    "options": [
+      "Marathóni csata",
+      "Thermopülai csata",
+      "Szalamiszi csata",
+      "Gaugamélai csata"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "A legenda szerint egy futár innen futott el Athénig a győzelem hírével, ami egy mai sportverseny nevét is adta.",
+    "probabilities": [66, 14, 12, 8]
+  },
+  {
+    "questionText": "Körülbelül milyen messze kering átlagosan a Föld a Naptól (1 csillagászati egység)?",
+    "options": [
+      "384 ezer kilométerre",
+      "15 millió kilométerre",
+      "1,5 milliárd kilométerre",
+      "150 millió kilométerre"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "A fény nagyjából 8 perc és 20 másodperc alatt teszi meg ezt a távolságot.",
+    "probabilities": [10, 12, 18, 60]
+  },
+  {
+    "questionText": "Hány befejezett szimfóniát komponált Ludwig van Beethoven?",
+    "options": [
+      "5",
+      "9",
+      "12",
+      "41"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Az utolsó darabja tartalmazza az Európai Unió himnuszaként is ismert „Örömódát”.",
+    "probabilities": [15, 62, 13, 10]
+  },
+  {
+    "questionText": "Melyik város Ausztrália hivatalos fővárosa?",
+    "options": [
+      "Sydney",
+      "Melbourne",
+      "Canberra",
+      "Perth"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Nem a két legnagyobb tengerparti metropolisz valamelyike, hanem a kettő között fekvő tervezett város.",
+    "probabilities": [18, 14, 58, 10]
+  },
+  {
+    "questionText": "Mi a kettes (bináris) számrendszerbeli alakja a tízes számrendszerbeli 42-es számnak?",
+    "options": [
+      "101010",
+      "110110",
+      "100110",
+      "111000"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "32 + 8 + 2 összegeként áll elő, így a helyiértékeken felváltva követik egymást az egyesek és a nullák.",
+    "probabilities": [55, 20, 15, 10]
+  },
+  {
+    "questionText": "Melyik magyar vár hősies védelméhez fűződik Dobó István várkapitány neve az 1552-es ostrom idején?",
+    "options": [
+      "Szigetvár",
+      "Kőszeg",
+      "Drégely",
+      "Eger"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "Gárdonyi Géza leghíresebb történelmi regénye is erről az ostromról szól.",
+    "probabilities": [8, 10, 12, 70]
+  },
+  {
+    "questionText": "Mit rövidít az „O” betű a modern OLED kijelzőpanelek nevében?",
+    "options": [
+      "Optical (Optikai)",
+      "Organic (Szerves)",
+      "Overclocked (Túlhajtott)",
+      "Orthogonal (Merőleges)"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "A technológia szénalapú, saját fényt kibocsátó réteget használ háttérvilágítás helyett.",
+    "probabilities": [15, 64, 11, 10]
+  },
+  {
+    "questionText": "Melyik HTTP státuszkód jelenti azt, hogy a keresett erőforrás nem található (Not Found)?",
+    "options": [
+      "200",
+      "403",
+      "404",
+      "500"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "A 4xx kategória a kliensoldali hibákat jelöli, ez pedig a legismertebb internetes hibakód.",
+    "probabilities": [5, 15, 72, 8]
+  },
+  {
+    "questionText": "Melyik gáz alkotja a Föld légkörének legnagyobb részét (körülbelül 78%-át)?",
+    "options": [
+      "Oxigén",
+      "Szén-dioxid",
+      "Argon",
+      "Nitrogén"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "Vegyjele N, színtelen és szagtalan kétatomos gáz.",
+    "probabilities": [20, 5, 5, 70]
+  },
+  {
+    "questionText": "Melyik adatszerkezet működik a LIFO (Last In, First Out – utoljára be, először ki) elven?",
+    "options": [
+      "Verem (Stack)",
+      "Sor (Queue)",
+      "Bináris keresőfa",
+      "Hasítótábla (Hash Table)"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Alapműveletei a push és a pop, akárcsak egy egymásra pakolt tányérkupacnál.",
+    "probabilities": [68, 18, 8, 6]
+  },
+  {
+    "questionText": "Melyik folyó szeli át London belvárosát?",
+    "options": [
+      "Szajna",
+      "Temze",
+      "Rajna",
+      "Tiberis"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Felette ível át a híres Tower Bridge.",
+    "probabilities": [12, 74, 8, 6]
+  },
+  {
+    "questionText": "Ki volt az első ember, aki a Hold felszínére lépett 1969. július 21-én?",
+    "options": [
+      "Jurij Gagarin",
+      "Buzz Aldrin",
+      "Neil Armstrong",
+      "Michael Collins"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Az Apollo–11 küldetés parancsnoka volt.",
+    "probabilities": [12, 14, 68, 6]
+  },
+  {
+    "questionText": "Melyik SQL utasítást használjuk adatok lekérdezésére egy adatbázis-táblából?",
+    "options": [
+      "SELECT",
+      "UPDATE",
+      "INSERT",
+      "EXTRACT"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Általában a FROM kulcsszó követi a tábla nevével.",
+    "probabilities": [82, 8, 6, 4]
+  },
+  {
+    "questionText": "Melyik magyar tudós kapott Nobel-díjat a C-vitamin (aszkorbinsav) izolálásával kapcsolatos kutatásaiért?",
+    "options": [
+      "Hevesy György",
+      "Békésy György",
+      "Szent-Györgyi Albert",
+      "Wigner Jenő"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Szegeden a fűszerpaprikából sikerült nagy mennyiségben kivonnia a vegyületet.",
+    "probabilities": [10, 10, 74, 6]
+  },
+  {
+    "questionText": "Mennyi a fény sebessége vákuumban másodpercenként?",
+    "options": [
+      "Körülbelül 30 000 km/s",
+      "Körülbelül 300 000 km/s",
+      "Körülbelül 3 000 000 km/s",
+      "Körülbelül 340 m/s"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Másodpercenként nagyjából hétszer és félszer kerülné meg a Földet az Egyenlítő mentén.",
+    "probabilities": [14, 68, 12, 6]
+  },
+  {
+    "questionText": "Melyik Git paranccsal hozhatunk létre helyi másolatot egy távoli (pl. GitHub) tárolóról?",
+    "options": [
+      "git commit",
+      "git push",
+      "git clone",
+      "git branch"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "A szó jelentése „klónozás”, és a távoli repository URL-jét kell megadni utána.",
+    "probabilities": [8, 10, 75, 7]
+  },
+  {
+    "questionText": "Hány fok egy síkbeli háromszög belső szögeinek összege az euklideszi geometriában?",
+    "options": [
+      "90 fok",
+      "180 fok",
+      "270 fok",
+      "360 fok"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Pontosabban egy egyenesszöggel egyenlő.",
+    "probabilities": [8, 78, 6, 8]
+  },
+  {
+    "questionText": "Melyik alapértelmezett TCP portot használja a titkosított HTTPS protokoll?",
+    "options": [
+      "22",
+      "443",
+      "80",
+      "8080"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "A sima HTTP a 80-as portot használja, a TLS/SSL titkosítású párja viszont ezt a háromjegyű számot.",
+    "probabilities": [10, 65, 15, 10]
+  },
+  {
+    "questionText": "Melyik tervezési minta (Design Pattern) biztosítja, hogy egy osztálynak pontosan egyetlen példánya létezzen?",
+    "options": [
+      "Singleton",
+      "Factory Method",
+      "Observer",
+      "Builder"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Privát konstruktort és egy statikus getInstance() metódust szokás használni hozzá.",
+    "probabilities": [70, 12, 10, 8]
+  },
+  {
+    "questionText": "Melyik évben történt a mohácsi csata?",
+    "options": [
+      "1456",
+      "1514",
+      "1526",
+      "1541"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Augusztus 29-én zajlott II. Lajos király és I. Szulejmán szultán seregei között.",
+    "probabilities": [12, 15, 63, 10]
+  },
+  {
+    "questionText": "Hány bájt (Byte) méretű egy `int` (egész szám) primitív adattípus a Java nyelvben?",
+    "options": [
+      "1 bájt",
+      "2 bájt",
+      "8 bájt",
+      "4 bájt"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "32 bites előjeles egész számról van szó, egy bájt pedig 8 bitből áll.",
+    "probabilities": [8, 12, 10, 70]
+  },
+  {
+    "questionText": "Melyik elemnek a legkisebb a rendszáma (1) a periódusos rendszerben?",
+    "options": [
+      "Hélium",
+      "Hidrogén",
+      "Lítium",
+      "Szén"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Az univerzum leggyakoribb eleme, atommagját egyetlen proton alkotja.",
+    "probabilities": [15, 65, 10, 10]
+  },
+  {
+    "questionText": "Melyik magyar feltaláló nevéhez fűződik a golyóstoll (Biro) megalkotása?",
+    "options": [
+      "Bíró László József",
+      "Jedlik Ányos",
+      "Kandó Kálmán",
+      "Bánki Donát"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Argentínában szabadalmaztatta találmányát, ahol a mai napig „birome” néven hívják a golyóstollat.",
+    "probabilities": [64, 16, 12, 8]
+  },
+  {
+    "questionText": "Melyik adatszerkezet vagy algoritmus időbonyolultsága $O(\\log n)$ egy rendezett tömbben való kereséskor?",
+    "options": [
+      "Lineáris keresés",
+      "Buborékrendezés",
+      "Bináris (felező) keresés",
+      "Mélységi bejárás"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Minden lépésben megfelezi a még vizsgálandó elemek intervallumát.",
+    "probabilities": [10, 14, 66, 10]
+  },
+  {
+    "questionText": "Melyik európai ország fővárosa Tallinn?",
+    "options": [
+      "Lettország",
+      "Észtország",
+      "Litvánia",
+      "Finnország"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "A három balti állam közül a legészakibb fekvésű.",
+    "probabilities": [12, 68, 12, 8]
+  },
+  {
+    "questionText": "Melyik Java kollekció-interfész NEM engedélyezi a duplikált (ismétlődő) elemek tárolását?",
+    "options": [
+      "List",
+      "Queue",
+      "ArrayList",
+      "Set"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "Matematikai halmazként működik; legismertebb implementációja a HashSet.",
+    "probabilities": [10, 10, 15, 65]
+  },
+  {
+    "questionText": "Melyik évben bocsátották fel az első műholdat, a Szputnyik–1-et?",
+    "options": [
+      "1957",
+      "1961",
+      "1969",
+      "1949"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Négy évvel Jurij Gagarin űrrepülése előtt történt.",
+    "probabilities": [72, 10, 10, 8]
+  },
+  {
+    "questionText": "Milyen futómű-felfüggesztési rendszert használt a szovjet BT-sorozat és a T-34 harckocsi?",
+    "options": [
+      "Hidropneumatikus felfüggesztés",
+      "Christie-féle spirálrugós felfüggesztés",
+      "Laprugós ívheveder",
+      "Merevtengelyes felfüggesztés"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Egy amerikai mérnökről (J. Walter Christie) kapta a nevét, és nagy futógörgőket alkalmazott.",
+    "probabilities": [14, 62, 14, 10]
+  },
+  {
+    "questionText": "Melyik kontinensen található a világ leghosszabb hegysége, az Andok?",
+    "options": [
+      "Ázsia",
+      "Észak-Amerika",
+      "Dél-Amerika",
+      "Afrika"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "A Csendes-óceán partvidékén húzódik végig többek között Chile és Peru területén.",
+    "probabilities": [10, 12, 68, 10]
+  },
+  {
+    "questionText": "Melyik kulcsszóval jelöljük Java-ban, ha egy változó értéke az inicializálás után már nem módosítható (konstans)?",
+    "options": [
+      "const",
+      "static",
+      "immutable",
+      "final"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "Osztályokra alkalmazva a továbbörökítést, metódusokra alkalmazva a felüldefiniálást is tiltja.",
+    "probabilities": [8, 14, 12, 66]
+  },
+  {
+    "questionText": "Ki volt az ókori Róma első császára (principátus alapítója)?",
+    "options": [
+      "Augustus (Octavianus)",
+      "Julius Caesar",
+      "Nero",
+      "Traianus"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Julius Caesar fogadott fia volt, és a nyolcadik hónapunk is az ő nevét viseli.",
+    "probabilities": [65, 15, 12, 8]
+  },
+  {
+    "questionText": "Mit jelent az „ACID” betűszóból az „A” betű az adatbázis-tranzakciók világában?",
+    "options": [
+      "Aszinkronitás (Asynchrony)",
+      "Atomiság (Atomicity)",
+      "Autentikáció (Authentication)",
+      "Aggregáció (Aggregation)"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Azt garantálja, hogy a tranzakció lépései vagy mind végrehajtódnak, vagy egyik sem („mindent vagy semmit”).",
+    "probabilities": [10, 70, 12, 8]
+  }
+]
+</file>
+
+<file path="src/main/resources/style.css">
+/* ==========================================================================
+   LEGYEN ÖN IS MILLIOMOS (WHO WANTS TO BE A MILLIONAIRE)
+   Letisztult, szögletes TV dizájn - Fényes hatású gradientek és árnyékok nélkül
+   ========================================================================== */
+
+.root {
+    -fx-base: #040814;
+    -fx-background: #040814;
+    -fx-control-inner-background: #081224;
+    -fx-font-family: "Segoe UI", "Arial", sans-serif;
+}
+
+/* ==========================================================================
+   FELSŐ MENÜSÁV - SZÖGLETES STÍLUS, BELSŐ VILÁGOSKÉK FÓKUSZKERET NÉLKÜL
+   ========================================================================== */
+.tab-pane {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.tab-pane .tab-header-area .tab-header-background {
+    -fx-background-color: #060e20;
+    -fx-border-color: #244878;
+    -fx-border-width: 0 0 2 0;
+}
+
+.tab {
+    -fx-background-color: #0b1836;
+    -fx-background-radius: 0;
+    -fx-background-insets: 0;
+    -fx-padding: 8 22;
+    -fx-border-color: #1a386b;
+    -fx-border-radius: 0;
+    -fx-border-width: 1 1 0 1;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.tab:hover {
+    -fx-background-color: #122550;
+    -fx-border-color: #3b6aa0;
+}
+
+.tab:selected {
+    -fx-background-color: #162f63;
+    -fx-background-insets: 0;
+    -fx-border-color: #f5af19 #f5af19 #162f63 #f5af19;
+    -fx-border-width: 2 2 0 2;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.tab:focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+/* Kiválasztott fül belső világoskék fókuszkeretének (focus-indicator) megszüntetése */
+.tab .focus-indicator,
+.tab:selected .focus-indicator,
+.tab:focused .focus-indicator,
+.tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator,
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .focus-indicator {
+    -fx-border-color: transparent !important;
+    -fx-border-width: 0 !important;
+    -fx-focus-color: transparent !important;
+    -fx-faint-focus-color: transparent !important;
+}
+
+.tab .tab-label {
+    -fx-text-fill: #e8f1fc;
+    -fx-font-weight: bold;
+    -fx-font-size: 13.5px;
+}
+
+.tab:selected .tab-label {
+    -fx-text-fill: #f5af19;
+}
+
+/* Felső menüsávban lévő szögletes némító gomb */
+.top-bar-mute-btn {
+    -fx-background-color: #0d1e40;
+    -fx-background-radius: 0;
+    -fx-border-color: #3b6aa0;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 0;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13.5px;
+    -fx-padding: 4 12;
+    -fx-cursor: hand;
+    -fx-effect: null;
+}
+
+.top-bar-mute-btn:hover {
+    -fx-background-color: #1a386b;
+    -fx-border-color: #f5af19;
+}
+
+/* ==========================================================================
+   STÚDIÓ KÁRTYÁK ÉS PANELEK - SZÖGLETES, FÉNYES GRADIENT NÉLKÜL
+   ========================================================================== */
+.glass-panel {
+    -fx-background-color: #071228;
+    -fx-background-radius: 0;
+    -fx-border-color: #244878;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 0;
+    -fx-effect: null;
+}
+
+/* ==========================================================================
+   SZÖGLETES KÉRDÉS- ÉS VÁLASZMEZŐK - MATT TV-SZÍNEK, FÉNYES GRADIENT NÉLKÜL
+   ========================================================================== */
+
+/* Valódi szögletes kérdésmező (Dinamikusan méreteződő magasság) */
+.question-banner {
+    -fx-shape: "M 0 50 L 2.7 0 L 97.3 0 L 100 50 L 97.3 100 L 2.7 100 Z";
+    -fx-background-color: #08142c;
+    -fx-background-radius: 0;
+    -fx-border-color: #3a78c4;
+    -fx-border-width: 2.2;
+    -fx-border-radius: 0;
+    -fx-padding: 12 38;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 16.5px;
+    -fx-font-weight: bold;
+    -fx-effect: null;
+}
+
+/* Valódi szögletes válaszgombok */
+.answer-button {
+    -fx-shape: "M 0 50 L 5.5 0 L 94.5 0 L 100 50 L 94.5 100 L 5.5 100 Z";
+    -fx-background-color: #08142c;
+    -fx-background-radius: 0;
+    -fx-border-color: #306cb4;
+    -fx-border-width: 2;
+    -fx-border-radius: 0;
+    -fx-padding: 6 28;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-effect: null;
+}
+
+/* Hover: Tiszta kék háttér, arany keret, fényes gradient nélkül */
+.answer-button:hover {
+    -fx-background-color: #102652;
+    -fx-border-color: #f5af19;
+    -fx-text-fill: #ffffff;
+    -fx-translate-y: 0;
+    -fx-effect: null;
+}
+
+/* Megjelölt válasz: Tiszta narancssárga, fényes gradient nélkül */
+.answer-selected {
+    -fx-background-color: #e67e00 !important;
+    -fx-border-color: #ffffff !important;
+    -fx-text-fill: #ffffff !important;
+    -fx-opacity: 1.0 !important;
+    -fx-effect: null !important;
+}
+
+/* Helyes válasz: Tiszta smaragdzöld, fényes gradient nélkül */
+.answer-correct {
+    -fx-background-color: #1b8a47 !important;
+    -fx-border-color: #ffffff !important;
+    -fx-text-fill: #ffffff !important;
+    -fx-opacity: 1.0 !important;
+    -fx-effect: null !important;
+}
+
+/* Helytelen válasz: Tiszta karmazsinpiros, fényes gradient nélkül */
+.answer-wrong {
+    -fx-background-color: #b82424 !important;
+    -fx-border-color: #ffffff !important;
+    -fx-text-fill: #ffffff !important;
+    -fx-opacity: 1.0 !important;
+    -fx-effect: null !important;
+}
+
+.answer-button:pressed {
+    -fx-translate-y: 1;
+}
+
+.answer-button:disabled {
+    -fx-opacity: 0.35;
+}
+
+/* Horizontális összekötő vonalak - Tiszta színátmenet nélkül */
+.tv-connector-line {
+    -fx-background-color: #306cb4;
+    -fx-opacity: 0.85;
+}
+
+/* ==========================================================================
+   SEGÍTSÉGEK (LIFELINES) - SZÖGLETES, FÉNYES GRADIENT NÉLKÜL
+   ========================================================================== */
+.lifeline-button {
+    -fx-background-color: #091836;
+    -fx-background-radius: 0;
+    -fx-border-color: #306cb4;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 0;
+    -fx-text-fill: #e8f4fd;
+    -fx-font-weight: bold;
+    -fx-font-size: 12.5px;
+    -fx-padding: 7 14;
+    -fx-cursor: hand;
+    -fx-effect: null;
+}
+
+.lifeline-button:hover {
+    -fx-background-color: #122752;
+    -fx-border-color: #f5af19;
+    -fx-text-fill: #ffffff;
+    -fx-effect: null;
+}
+
+.lifeline-button:disabled {
+    -fx-opacity: 0.40;
+    -fx-border-color: #1a2a44;
+}
+
+/* Megállás / Kiszállás gomb */
+.walk-away-button {
+    -fx-background-color: #3d2600;
+    -fx-border-color: #d48800;
+    -fx-text-fill: #ffeaa7;
+}
+
+.walk-away-button:hover {
+    -fx-background-color: #d48800;
+    -fx-border-color: #ffffff;
+    -fx-text-fill: #060c18;
+}
+
+/* ==========================================================================
+   15 LÉPCSŐS NYEREMÉNYFA - SZÖGLETES, TISZTA SZÍNEK
+   ========================================================================== */
+.prize-ladder {
+    -fx-background-color: #050c1c;
+    -fx-border-color: #244878;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 0;
+    -fx-background-radius: 0;
+    -fx-effect: null;
+}
+
+.ladder-step {
+    -fx-background-color: #091530;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-radius: 0;
+    -fx-border-width: 1;
+}
+
+.ladder-text {
+    -fx-text-fill: #e69d15;
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+}
+
+.ladder-step-milestone {
+    -fx-background-color: #13274f;
+    -fx-border-color: #3b6aa0;
+}
+
+.ladder-step-milestone .ladder-text {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 12px;
+}
+
+.ladder-step-passed {
+    -fx-background-color: #0d2818;
+    -fx-border-color: #1b8a47;
+}
+
+.ladder-step-passed .ladder-text {
+    -fx-text-fill: #2ecc71;
+}
+
+.ladder-step-current {
+    -fx-background-color: #ffb300;
+    -fx-border-color: #ffffff;
+    -fx-border-width: 1.5;
+    -fx-effect: null;
+}
+
+.ladder-step-current .ladder-text {
+    -fx-text-fill: #040814;
+    -fx-font-weight: bold;
+}
+
+/* ==========================================================================
+   KÖZÖNSÉG OSZLOPDIAGRAM
+   ========================================================================== */
+.audience-chart-pane {
+    -fx-background-color: #060f24;
+    -fx-border-color: #306cb4;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 0;
+    -fx-background-radius: 0;
+    -fx-effect: null;
+}
+
+.chart-bar-track {
+    -fx-background-color: #030814;
+    -fx-background-radius: 0;
+    -fx-border-color: #142a50;
+    -fx-border-radius: 0;
+    -fx-border-width: 1;
+}
+
+.chart-bar-fill {
+    -fx-background-color: #0077dd;
+    -fx-background-radius: 0;
+    -fx-border-color: #4da6ff;
+    -fx-border-width: 1 1 0 1;
+    -fx-border-radius: 0;
+    -fx-effect: null;
+}
+
+.chart-bar-highest {
+    -fx-background-color: #e67e00;
+    -fx-border-color: #ffffff;
+    -fx-effect: null;
+}
+
+.chart-pct-label {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+}
+
+.chart-axis-label {
+    -fx-text-fill: #f5af19;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* ==========================================================================
+   TÁBLÁZAT ÉS LISTA NÉZETEK
+   ========================================================================== */
+.table-view, .list-view {
+    -fx-background-color: #071024;
+    -fx-border-color: #244878;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 0;
+    -fx-background-radius: 0;
+    -fx-effect: null;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #0d1e3d;
+}
+
+.table-view .column-header {
+    -fx-background-color: transparent;
+    -fx-border-color: #1a386b;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: #f5af19;
+    -fx-font-weight: bold;
+}
+
+.table-row-cell, .list-cell {
+    -fx-background-color: #091736;
+    -fx-text-fill: #e0f0fc;
+}
+
+.table-row-cell:odd, .list-cell:odd {
+    -fx-background-color: #0c1e44;
+}
+
+.table-row-cell:selected, .list-cell:filled:selected {
+    -fx-background-color: #ffb300;
+    -fx-text-fill: #040814;
+    -fx-font-weight: bold;
+}
+
+/* ==========================================================================
+   FELUGRÓ EREDMÉNY ABLAK (STÚDIÓ DIALÓGUS)
+   ========================================================================== */
+.studio-dialog {
+    -fx-background-color: #071228;
+    -fx-border-color: #3a78c4;
+    -fx-border-width: 2;
+    -fx-border-radius: 0;
+    -fx-background-radius: 0;
+    -fx-padding: 18 24 18 24;
+    -fx-effect: null;
+}
+
+.studio-dialog > .content {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.studio-dialog > .button-bar > .container {
+    -fx-background-color: transparent;
+    -fx-padding: 16 0 4 0;
+    -fx-alignment: center;
+}
+
+.studio-dialog-title {
+    -fx-text-fill: #f5af19;
+    -fx-font-family: "Arial Black", "Segoe UI", sans-serif;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.studio-dialog-message {
+    -fx-text-fill: #e8f1fc;
+    -fx-font-size: 14.5px;
+    -fx-font-weight: bold;
+}
+
+.studio-stats-box {
+    -fx-background-color: #08142c;
+    -fx-border-color: #244878;
+    -fx-border-width: 1.5;
+    -fx-padding: 12 20;
+}
+
+.studio-stat-label {
+    -fx-text-fill: #c4d7ed;
+    -fx-font-size: 13.5px;
+}
+
+.studio-stat-value {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.studio-final-prize-banner {
+    -fx-shape: "M 0 50 L 4.0 0 L 96.0 0 L 100 50 L 96.0 100 L 4.0 100 Z";
+    -fx-background-color: #0b1c3d;
+    -fx-border-color: #f5af19;
+    -fx-border-width: 2;
+    -fx-padding: 10 32;
+    -fx-text-fill: #f5af19;
+    -fx-font-size: 16.5px;
+    -fx-font-weight: bold;
+}
+</file>
+
+<file path=".gitignore">
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+.kotlin
+
+### IntelliJ IDEA ###
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/libraries/
+*.iws
+*.iml
+*.ipr
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+
+### App specific ###
+scores.json
+</file>
+
+<file path="dependency-reduced-pom.xml">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>hu.milliomos</groupId>
+  <artifactId>milliomos-jatek</artifactId>
+  <version>1.0.0</version>
+  <build>
+    <testSourceDirectory>src/main/java</testSourceDirectory>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.2.5</version>
+        <configuration>
+          <includes>
+            <include>**/test/*Test.java</include>
+          </includes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.5.2</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>desktop</shadedClassifierName>
+              <transformers>
+                <transformer>
+                  <mainClass>hu.milliomos.Launcher</mainClass>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <javafx.version>21.0.2</javafx.version>
+    <maven.compiler.target>21</maven.compiler.target>
+    <maven.compiler.source>21</maven.compiler.source>
+  </properties>
+</project>
+</file>
+
+<file path="exe-keszito.bat">
+@echo off
+chcp 65001 >nul
+title Legyen Ön is Milliomos - EXE és Telepítő Generáló
+
+:: jpackage felderítése
+set "JPACKAGE_CMD=jpackage"
+if exist "%JAVA_HOME%\bin\jpackage.exe" (
+    set "JPACKAGE_CMD=%JAVA_HOME%\bin\jpackage.exe"
+) else if exist "C:\Program Files\BellSoft\LibericaJDK-25-Full\bin\jpackage.exe" (
+    set "JPACKAGE_CMD=C:\Program Files\BellSoft\LibericaJDK-25-Full\bin\jpackage.exe"
+) else if exist "C:\Users\%USERNAME%\.jdks\openjdk-25.0.1\bin\jpackage.exe" (
+    set "JPACKAGE_CMD=C:\Users\%USERNAME%\.jdks\openjdk-25.0.1\bin\jpackage.exe"
+) else if exist "C:\Users\csaba\.jdks\openjdk-25.0.1\bin\jpackage.exe" (
+    set "JPACKAGE_CMD=C:\Users\csaba\.jdks\openjdk-25.0.1\bin\jpackage.exe"
+)
+
+:: Maven parancs felderítése
+set "MVN_CMD=mvn"
+where mvn >nul 2>&1
+if errorlevel 1 (
+    if exist "%MAVEN_HOME%\bin\mvn.cmd" (
+        set "MVN_CMD=%MAVEN_HOME%\bin\mvn.cmd"
+    ) else if exist "C:\Program Files\JetBrains\IntelliJ IDEA Community Edition 2025.2.4\plugins\maven\lib\maven3\bin\mvn.cmd" (
+        set "MVN_CMD=C:\Program Files\JetBrains\IntelliJ IDEA Community Edition 2025.2.4\plugins\maven\lib\maven3\bin\mvn.cmd"
+    )
+)
+
+echo ========================================================
+echo 1. LÉPÉS: Fat JAR ellenőrzése a target mappában...
+echo ========================================================
+if not exist "target\milliomos-jatek-1.0.0-desktop.jar" (
+    echo A JAR még nincs lefordítva, Maven package indítása...
+    call "%MVN_CMD%" clean package -DskipTests
+)
+
+if not exist "target\milliomos-jatek-1.0.0-desktop.jar" (
+    echo [HIBA] Nem található a target\milliomos-jatek-1.0.0-desktop.jar!
+    echo Kérlek ellenőrizd a Maven fordítást!
+    pause
+    exit /b 1
+)
+
+echo.
+echo ========================================================
+echo 2. LÉPÉS: Tiszta bemeneti mappa előkészítése...
+echo ========================================================
+if exist "jpackage-input" rmdir /s /q "jpackage-input"
+if exist "dist" rmdir /s /q "dist"
+mkdir "jpackage-input"
+
+copy "target\milliomos-jatek-1.0.0-desktop.jar" "jpackage-input\" >nul
+if exist "questions.json" copy "questions.json" "jpackage-input\" >nul
+
+echo.
+echo ========================================================
+echo 3. LÉPÉS: Hordozható Windows .EXE generálása (app-image)
+echo ========================================================
+"%JPACKAGE_CMD%" ^
+  --type app-image ^
+  --name "MilliomosJatek" ^
+  --app-version "1.0.0" ^
+  --vendor "Debreceni Egyetem - Szoftverfejlesztes" ^
+  --input "jpackage-input" ^
+  --dest "dist" ^
+  --main-jar "milliomos-jatek-1.0.0-desktop.jar" ^
+  --main-class "hu.milliomos.Launcher" ^
+  --java-options "-Dfile.encoding=UTF-8" ^
+  --java-options "--enable-native-access=ALL-UNNAMED"
+
+if exist "questions.json" (
+    copy "questions.json" "dist\MilliomosJatek\" >nul
+)
+
+echo [SIKER] Az önállóan futtatható .exe elkészült itt:
+echo         dist\MilliomosJatek\MilliomosJatek.exe
+
+echo.
+echo ========================================================
+echo 4. LÉPÉS: Windows Telepítő (.exe installer) kísérlete...
+echo ========================================================
+"%JPACKAGE_CMD%" ^
+  --type exe ^
+  --name "MilliomosJatek-Telepito" ^
+  --app-version "1.0.0" ^
+  --vendor "Debreceni Egyetem - Szoftverfejlesztes" ^
+  --input "jpackage-input" ^
+  --dest "dist" ^
+  --main-jar "milliomos-jatek-1.0.0-desktop.jar" ^
+  --main-class "hu.milliomos.Launcher" ^
+  --win-shortcut ^
+  --win-menu ^
+  --win-dir-chooser ^
+  --java-options "-Dfile.encoding=UTF-8" ^
+  --java-options "--enable-native-access=ALL-UNNAMED"
+
+if errorlevel 1 (
+    echo.
+    echo [MEGJEGYZÉS] A telepítős (Setup .exe) változathoz a WiX Toolset szükséges,
+    echo de a hordozható dist\MilliomosJatek\MilliomosJatek.exe már KÉSZ és azonnal indítható!
+) else (
+    echo [SIKER] A telepítő (.exe) is elkészült a dist\ mappában!
+)
+
+rmdir /s /q "jpackage-input"
+echo.
+pause
+</file>
+
+<file path="indito.bat">
+@echo off
+chcp 65001 >nul
+title Legyen Ön is Milliomos - Indító
+
+set "JAR_FILE=target\milliomos-jatek-1.0.0-desktop.jar"
+set "JVM_ARGS=--enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow"
+
+:: Java futtató felderítése
+set "JAVAW_CMD=javaw"
+if exist "%JAVA_HOME%\bin\javaw.exe" (
+    set "JAVAW_CMD=%JAVA_HOME%\bin\javaw.exe"
+) else if exist "C:\Program Files\BellSoft\LibericaJDK-25-Full\bin\javaw.exe" (
+    set "JAVAW_CMD=C:\Program Files\BellSoft\LibericaJDK-25-Full\bin\javaw.exe"
+) else if exist "C:\Users\%USERNAME%\.jdks\openjdk-25.0.1\bin\javaw.exe" (
+    set "JAVAW_CMD=C:\Users\%USERNAME%\.jdks\openjdk-25.0.1\bin\javaw.exe"
+) else if exist "C:\Users\csaba\.jdks\openjdk-25.0.1\bin\javaw.exe" (
+    set "JAVAW_CMD=C:\Users\csaba\.jdks\openjdk-25.0.1\bin\javaw.exe"
+)
+
+:: Maven parancs felderítése
+set "MVN_CMD=mvn"
+where mvn >nul 2>&1
+if errorlevel 1 (
+    if exist "%MAVEN_HOME%\bin\mvn.cmd" (
+        set "MVN_CMD=%MAVEN_HOME%\bin\mvn.cmd"
+    ) else if exist "C:\Program Files\JetBrains\IntelliJ IDEA Community Edition 2025.2.4\plugins\maven\lib\maven3\bin\mvn.cmd" (
+        set "MVN_CMD=C:\Program Files\JetBrains\IntelliJ IDEA Community Edition 2025.2.4\plugins\maven\lib\maven3\bin\mvn.cmd"
+    )
+)
+:: Hibakód törlése
+(call )
+
+:: Ha még nem létezik a lefordított Fat JAR, lefordítjuk Maven-nel
+if not exist "%JAR_FILE%" (
+    echo [INFO] A futtatható JAR fájl még nem létezik. Fordítás folyamatban...
+    call "%MVN_CMD%" clean package -DskipTests
+    if errorlevel 1 (
+        echo [HIBA] A Maven fordítás sikertelen! Ellenőrizd, hogy a Maven elérhető-e!
+        pause
+        exit /b 1
+    )
+)
+
+echo [INFO] Legyen Ön is Milliomos indítása (%JAVAW_CMD%)...
+start "" "%JAVAW_CMD%" %JVM_ARGS% -Dfile.encoding=UTF-8 -jar "%JAR_FILE%"
+
+exit /b 0
+</file>
+
+<file path="pom.xml">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>hu.milliomos</groupId>
+    <artifactId>milliomos-jatek</artifactId>
+    <version>1.0.0</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <javafx.version>21.0.2</javafx.version>
+    </properties>
+
+    <dependencies>
+        <!-- JavaFX vezérlők és Windows natív grafikus könyvtárak az asztali .jar/.exe futtatáshoz -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>win</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>win</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-base</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>win</classifier>
+        </dependency>
+
+        <!-- Google Gson a JSON fájlok olvasásához és írásához -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.11.0</version>
+        </dependency>
+
+        <!-- JUnit 5 az egységtesztekhez (scope nélkül, hogy az src/main/java/hu/milliomos/test alatt is forduljon) -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <!-- Megmondjuk a Mavennek, hogy a teszteket a jelenlegi helyükön (src/main/java/hu/milliomos/test) is keresse -->
+        <testSourceDirectory>src/main/java</testSourceDirectory>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+
+            <!-- JUnit 5 tesztfuttató plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <includes>
+                        <include>**/test/*Test.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+
+            <!-- Fat JAR generáló plugin az asztali futtatáshoz -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>desktop</shadedClassifierName>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>hu.milliomos.Launcher</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+</file>
+
+<file path="questions.json">
+[
+  {
+    "questionText": "Melyik bolygót nevezik a „Vörös Bolygónak” a Naprendszerben?",
+    "options": [
+      "Vénusz",
+      "Mars",
+      "Jupiter",
+      "Merkúr"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Felszínét nagy mennyiségű vas-oxid (rozsda) borítja, és a római hadistenről kapta a nevét.",
+    "probabilities": [10, 75, 10, 5]
+  },
+  {
+    "questionText": "Melyik szoftvertervezési alapelv mondja ki, hogy egy osztálynak csak egyetlen felelőssége legyen?",
+    "options": [
+      "Open-Closed Principle",
+      "Single Responsibility Principle",
+      "Liskov Substitution Principle",
+      "Dependency Inversion Principle"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "A rövidítése SRP, és a SOLID alapelvek legelső betűjét adja.",
+    "probabilities": [12, 70, 10, 8]
+  },
+  {
+    "questionText": "Melyik évben adta ki II. András magyar király az Aranybullát?",
+    "options": [
+      "1000",
+      "1241",
+      "1222",
+      "1301"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Az évszámban három darab kettes számjegy követi egymást.",
+    "probabilities": [10, 15, 65, 10]
+  },
+  {
+    "questionText": "Mi a kémiai vegyjele az aranynak a periódusos rendszerben?",
+    "options": [
+      "Au",
+      "Ag",
+      "Fe",
+      "Cu"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "A latin „Aurum” szóból ered a rövidítése.",
+    "probabilities": [80, 10, 5, 5]
+  },
+  {
+    "questionText": "Melyik a Föld legmélyebb ismert tengeri árka?",
+    "options": [
+      "Tonga-árok",
+      "Puerto Ricó-i árok",
+      "Jáva-árok",
+      "Mariana-árok"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "A Csendes-óceánban található, legmélyebb pontja a közel 11 kilométer mély Challenger-mélység.",
+    "probabilities": [8, 12, 10, 70]
+  },
+  {
+    "questionText": "Ki írta „Az ember tragédiája” című drámai költeményt?",
+    "options": [
+      "Katona József",
+      "Arany János",
+      "Madách Imre",
+      "Vörösmarty Mihály"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Alsósztregován élt és alkotott; művének főszereplői Ádám, Éva és Lucifer.",
+    "probabilities": [10, 10, 72, 8]
+  },
+  {
+    "questionText": "Mi a szerepe a processzorokban (CPU) található „Cache” memóriának?",
+    "options": [
+      "Gyors elérésű átmeneti adattárolás a magok számára",
+      "A monitor képfrissítésének analóg szinkronizálása",
+      "A tápegység feszültségingadozásának szűrése",
+      "A hálózati csomagok titkosítása"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "L1, L2 és L3 szintjei vannak, és drasztikusan csökkenti a RAM eléréséből fakadó várakozási időt.",
+    "probabilities": [68, 14, 10, 8]
+  },
+  {
+    "questionText": "Ki tervezte a tömegreteszes késleltetésű, 9x25 mm-es Mauser lőszert tüzelő magyar 39M géppisztolyt?",
+    "options": [
+      "Frommer Rudolf",
+      "Király Pál",
+      "Mannlicher Ferdinánd",
+      "Kucher József"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "A fegyvert a köznyelvben is a tervező vezetéknevén emlegették, később a Dominikai Köztársaságban is alkotott.",
+    "probabilities": [15, 60, 15, 10]
+  },
+  {
+    "questionText": "Melyik sejtszervecske felelős az eukarióta sejtek energiatermeléséért (ATP-szintézis)?",
+    "options": [
+      "Riboszóma",
+      "Golgi-készülék",
+      "Mitokondrium",
+      "Lizoszóma"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Gyakran nevezik a „sejt erőművének” is, és saját DNS-sel rendelkezik.",
+    "probabilities": [12, 13, 65, 10]
+  },
+  {
+    "questionText": "Melyik hegységünkben található Magyarország legmagasabb pontja, az 1014 méteres Kékes?",
+    "options": [
+      "Mátra",
+      "Bükk",
+      "Börzsöny",
+      "Zempléni-hegység"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Az Északi-középhegység része, Gyöngyös városától északra emelkedik.",
+    "probabilities": [78, 10, 7, 5]
+  },
+  {
+    "questionText": "Milyen mértékegységgel mérjük az elektromos ellenállást az SI-mértékegységrendszerben?",
+    "options": [
+      "Amper",
+      "Volt",
+      "Watt",
+      "Ohm"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "Jele a görög nagy ómega (Ω) betű.",
+    "probabilities": [10, 10, 15, 65]
+  },
+  {
+    "questionText": "Melyik kulcsszóval származtatható (örökölhető) egy osztály egy másik osztályból Java nyelvben?",
+    "options": [
+      "implements",
+      "extends",
+      "inherits",
+      "super"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Az interfészekhez az „implements” tartozik, az osztályok közötti kiterjesztéshez viszont ez a szó.",
+    "probabilities": [14, 72, 8, 6]
+  },
+  {
+    "questionText": "Ki festette a vatikáni Sixtus-kápolna híres mennyezetfreskóját?",
+    "options": [
+      "Leonardo da Vinci",
+      "Raffaello Sanzio",
+      "Michelangelo Buonarroti",
+      "Sandro Botticelli"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Ugyanez a reneszánsz mester faragta a firenzei Dávid-szobrot is.",
+    "probabilities": [15, 12, 63, 10]
+  },
+  {
+    "questionText": "Melyik ókori csata zajlott le Kr. e. 490-ben az athéniak és a támadó perzsák között?",
+    "options": [
+      "Marathóni csata",
+      "Thermopülai csata",
+      "Szalamiszi csata",
+      "Gaugamélai csata"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "A legenda szerint egy futár innen futott el Athénig a győzelem hírével, ami egy mai sportverseny nevét is adta.",
+    "probabilities": [66, 14, 12, 8]
+  },
+  {
+    "questionText": "Körülbelül milyen messze kering átlagosan a Föld a Naptól (1 csillagászati egység)?",
+    "options": [
+      "384 ezer kilométerre",
+      "15 millió kilométerre",
+      "1,5 milliárd kilométerre",
+      "150 millió kilométerre"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "A fény nagyjából 8 perc és 20 másodperc alatt teszi meg ezt a távolságot.",
+    "probabilities": [10, 12, 18, 60]
+  },
+  {
+    "questionText": "Hány befejezett szimfóniát komponált Ludwig van Beethoven?",
+    "options": [
+      "5",
+      "9",
+      "12",
+      "41"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Az utolsó darabja tartalmazza az Európai Unió himnuszaként is ismert „Örömódát”.",
+    "probabilities": [15, 62, 13, 10]
+  },
+  {
+    "questionText": "Melyik város Ausztrália hivatalos fővárosa?",
+    "options": [
+      "Sydney",
+      "Melbourne",
+      "Canberra",
+      "Perth"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Nem a két legnagyobb tengerparti metropolisz valamelyike, hanem a kettő között fekvő tervezett város.",
+    "probabilities": [18, 14, 58, 10]
+  },
+  {
+    "questionText": "Mi a kettes (bináris) számrendszerbeli alakja a tízes számrendszerbeli 42-es számnak?",
+    "options": [
+      "101010",
+      "110110",
+      "100110",
+      "111000"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "32 + 8 + 2 összegeként áll elő, így a helyiértékeken felváltva követik egymást az egyesek és a nullák.",
+    "probabilities": [55, 20, 15, 10]
+  },
+  {
+    "questionText": "Melyik magyar vár hősies védelméhez fűződik Dobó István várkapitány neve az 1552-es ostrom idején?",
+    "options": [
+      "Szigetvár",
+      "Kőszeg",
+      "Drégely",
+      "Eger"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "Gárdonyi Géza leghíresebb történelmi regénye is erről az ostromról szól.",
+    "probabilities": [8, 10, 12, 70]
+  },
+  {
+    "questionText": "Mit rövidít az „O” betű a modern OLED kijelzőpanelek nevében?",
+    "options": [
+      "Optical (Optikai)",
+      "Organic (Szerves)",
+      "Overclocked (Túlhajtott)",
+      "Orthogonal (Merőleges)"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "A technológia szénalapú, saját fényt kibocsátó réteget használ háttérvilágítás helyett.",
+    "probabilities": [15, 64, 11, 10]
+  },
+  {
+    "questionText": "Melyik HTTP státuszkód jelenti azt, hogy a keresett erőforrás nem található (Not Found)?",
+    "options": [
+      "200",
+      "403",
+      "404",
+      "500"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "A 4xx kategória a kliensoldali hibákat jelöli, ez pedig a legismertebb internetes hibakód.",
+    "probabilities": [5, 15, 72, 8]
+  },
+  {
+    "questionText": "Melyik gáz alkotja a Föld légkörének legnagyobb részét (körülbelül 78%-át)?",
+    "options": [
+      "Oxigén",
+      "Szén-dioxid",
+      "Argon",
+      "Nitrogén"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "Vegyjele N, színtelen és szagtalan kétatomos gáz.",
+    "probabilities": [20, 5, 5, 70]
+  },
+  {
+    "questionText": "Melyik adatszerkezet működik a LIFO (Last In, First Out – utoljára be, először ki) elven?",
+    "options": [
+      "Verem (Stack)",
+      "Sor (Queue)",
+      "Bináris keresőfa",
+      "Hasítótábla (Hash Table)"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Alapműveletei a push és a pop, akárcsak egy egymásra pakolt tányérkupacnál.",
+    "probabilities": [68, 18, 8, 6]
+  },
+  {
+    "questionText": "Melyik folyó szeli át London belvárosát?",
+    "options": [
+      "Szajna",
+      "Temze",
+      "Rajna",
+      "Tiberis"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Felette ível át a híres Tower Bridge.",
+    "probabilities": [12, 74, 8, 6]
+  },
+  {
+    "questionText": "Ki volt az első ember, aki a Hold felszínére lépett 1969. július 21-én?",
+    "options": [
+      "Jurij Gagarin",
+      "Buzz Aldrin",
+      "Neil Armstrong",
+      "Michael Collins"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Az Apollo–11 küldetés parancsnoka volt.",
+    "probabilities": [12, 14, 68, 6]
+  },
+  {
+    "questionText": "Melyik SQL utasítást használjuk adatok lekérdezésére egy adatbázis-táblából?",
+    "options": [
+      "SELECT",
+      "UPDATE",
+      "INSERT",
+      "EXTRACT"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Általában a FROM kulcsszó követi a tábla nevével.",
+    "probabilities": [82, 8, 6, 4]
+  },
+  {
+    "questionText": "Melyik magyar tudós kapott Nobel-díjat a C-vitamin (aszkorbinsav) izolálásával kapcsolatos kutatásaiért?",
+    "options": [
+      "Hevesy György",
+      "Békésy György",
+      "Szent-Györgyi Albert",
+      "Wigner Jenő"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Szegeden a fűszerpaprikából sikerült nagy mennyiségben kivonnia a vegyületet.",
+    "probabilities": [10, 10, 74, 6]
+  },
+  {
+    "questionText": "Mennyi a fény sebessége vákuumban másodpercenként?",
+    "options": [
+      "Körülbelül 30 000 km/s",
+      "Körülbelül 300 000 km/s",
+      "Körülbelül 3 000 000 km/s",
+      "Körülbelül 340 m/s"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Másodpercenként nagyjából hétszer és félszer kerülné meg a Földet az Egyenlítő mentén.",
+    "probabilities": [14, 68, 12, 6]
+  },
+  {
+    "questionText": "Melyik Git paranccsal hozhatunk létre helyi másolatot egy távoli (pl. GitHub) tárolóról?",
+    "options": [
+      "git commit",
+      "git push",
+      "git clone",
+      "git branch"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "A szó jelentése „klónozás”, és a távoli repository URL-jét kell megadni utána.",
+    "probabilities": [8, 10, 75, 7]
+  },
+  {
+    "questionText": "Hány fok egy síkbeli háromszög belső szögeinek összege az euklideszi geometriában?",
+    "options": [
+      "90 fok",
+      "180 fok",
+      "270 fok",
+      "360 fok"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Pontosabban egy egyenesszöggel egyenlő.",
+    "probabilities": [8, 78, 6, 8]
+  },
+  {
+    "questionText": "Melyik alapértelmezett TCP portot használja a titkosított HTTPS protokoll?",
+    "options": [
+      "22",
+      "443",
+      "80",
+      "8080"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "A sima HTTP a 80-as portot használja, a TLS/SSL titkosítású párja viszont ezt a háromjegyű számot.",
+    "probabilities": [10, 65, 15, 10]
+  },
+  {
+    "questionText": "Melyik tervezési minta (Design Pattern) biztosítja, hogy egy osztálynak pontosan egyetlen példánya létezzen?",
+    "options": [
+      "Singleton",
+      "Factory Method",
+      "Observer",
+      "Builder"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Privát konstruktort és egy statikus getInstance() metódust szokás használni hozzá.",
+    "probabilities": [70, 12, 10, 8]
+  },
+  {
+    "questionText": "Melyik évben történt a mohácsi csata?",
+    "options": [
+      "1456",
+      "1514",
+      "1526",
+      "1541"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Augusztus 29-én zajlott II. Lajos király és I. Szulejmán szultán seregei között.",
+    "probabilities": [12, 15, 63, 10]
+  },
+  {
+    "questionText": "Hány bájt (Byte) méretű egy `int` (egész szám) primitív adattípus a Java nyelvben?",
+    "options": [
+      "1 bájt",
+      "2 bájt",
+      "8 bájt",
+      "4 bájt"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "32 bites előjeles egész számról van szó, egy bájt pedig 8 bitből áll.",
+    "probabilities": [8, 12, 10, 70]
+  },
+  {
+    "questionText": "Melyik elemnek a legkisebb a rendszáma (1) a periódusos rendszerben?",
+    "options": [
+      "Hélium",
+      "Hidrogén",
+      "Lítium",
+      "Szén"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Az univerzum leggyakoribb eleme, atommagját egyetlen proton alkotja.",
+    "probabilities": [15, 65, 10, 10]
+  },
+  {
+    "questionText": "Melyik magyar feltaláló nevéhez fűződik a golyóstoll (Biro) megalkotása?",
+    "options": [
+      "Bíró László József",
+      "Jedlik Ányos",
+      "Kandó Kálmán",
+      "Bánki Donát"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Argentínában szabadalmaztatta találmányát, ahol a mai napig „birome” néven hívják a golyóstollat.",
+    "probabilities": [64, 16, 12, 8]
+  },
+  {
+    "questionText": "Melyik adatszerkezet vagy algoritmus időbonyolultsága $O(\\log n)$ egy rendezett tömbben való kereséskor?",
+    "options": [
+      "Lineáris keresés",
+      "Buborékrendezés",
+      "Bináris (felező) keresés",
+      "Mélységi bejárás"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "Minden lépésben megfelezi a még vizsgálandó elemek intervallumát.",
+    "probabilities": [10, 14, 66, 10]
+  },
+  {
+    "questionText": "Melyik európai ország fővárosa Tallinn?",
+    "options": [
+      "Lettország",
+      "Észtország",
+      "Litvánia",
+      "Finnország"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "A három balti állam közül a legészakibb fekvésű.",
+    "probabilities": [12, 68, 12, 8]
+  },
+  {
+    "questionText": "Melyik Java kollekció-interfész NEM engedélyezi a duplikált (ismétlődő) elemek tárolását?",
+    "options": [
+      "List",
+      "Queue",
+      "ArrayList",
+      "Set"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "Matematikai halmazként működik; legismertebb implementációja a HashSet.",
+    "probabilities": [10, 10, 15, 65]
+  },
+  {
+    "questionText": "Melyik évben bocsátották fel az első műholdat, a Szputnyik–1-et?",
+    "options": [
+      "1957",
+      "1961",
+      "1969",
+      "1949"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Négy évvel Jurij Gagarin űrrepülése előtt történt.",
+    "probabilities": [72, 10, 10, 8]
+  },
+  {
+    "questionText": "Milyen futómű-felfüggesztési rendszert használt a szovjet BT-sorozat és a T-34 harckocsi?",
+    "options": [
+      "Hidropneumatikus felfüggesztés",
+      "Christie-féle spirálrugós felfüggesztés",
+      "Laprugós ívheveder",
+      "Merevtengelyes felfüggesztés"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Egy amerikai mérnökről (J. Walter Christie) kapta a nevét, és nagy futógörgőket alkalmazott.",
+    "probabilities": [14, 62, 14, 10]
+  },
+  {
+    "questionText": "Melyik kontinensen található a világ leghosszabb hegysége, az Andok?",
+    "options": [
+      "Ázsia",
+      "Észak-Amerika",
+      "Dél-Amerika",
+      "Afrika"
+    ],
+    "correctOptionIndex": 2,
+    "tip": "A Csendes-óceán partvidékén húzódik végig többek között Chile és Peru területén.",
+    "probabilities": [10, 12, 68, 10]
+  },
+  {
+    "questionText": "Melyik kulcsszóval jelöljük Java-ban, ha egy változó értéke az inicializálás után már nem módosítható (konstans)?",
+    "options": [
+      "const",
+      "static",
+      "immutable",
+      "final"
+    ],
+    "correctOptionIndex": 3,
+    "tip": "Osztályokra alkalmazva a továbbörökítést, metódusokra alkalmazva a felüldefiniálást is tiltja.",
+    "probabilities": [8, 14, 12, 66]
+  },
+  {
+    "questionText": "Ki volt az ókori Róma első császára (principátus alapítója)?",
+    "options": [
+      "Augustus (Octavianus)",
+      "Julius Caesar",
+      "Nero",
+      "Traianus"
+    ],
+    "correctOptionIndex": 0,
+    "tip": "Julius Caesar fogadott fia volt, és a nyolcadik hónapunk is az ő nevét viseli.",
+    "probabilities": [65, 15, 12, 8]
+  },
+  {
+    "questionText": "Mit jelent az „ACID” betűszóból az „A” betű az adatbázis-tranzakciók világában?",
+    "options": [
+      "Aszinkronitás (Asynchrony)",
+      "Atomiság (Atomicity)",
+      "Autentikáció (Authentication)",
+      "Aggregáció (Aggregation)"
+    ],
+    "correctOptionIndex": 1,
+    "tip": "Azt garantálja, hogy a tranzakció lépései vagy mind végrehajtódnak, vagy egyik sem („mindent vagy semmit”).",
+    "probabilities": [10, 70, 12, 8]
+  }
+]
+</file>
+
+<file path="README.md">
+# Milliomos játék
+*Szoftverfejlesztésre csapatmunka*
+
+---
+
+## TODO
+</file>
+
+</files>
