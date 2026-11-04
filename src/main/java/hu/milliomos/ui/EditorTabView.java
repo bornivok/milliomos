@@ -24,8 +24,8 @@ public class EditorTabView extends BorderPane {
     private final ComboBox<String> correctCombo = new ComboBox<>();
     private final TextField tipField = new TextField();
 
-    private final Button updateBtn = new Button("✏️ Kijelölt módosítása");
-    private final Button deleteBtn = new Button("🗑️ Kijelölt törlése");
+    private final Button updateBtn = new Button("✏ Kijelölt módosítása");
+    private final Button deleteBtn = new Button("🗑 Kijelölt törlése");
 
     public EditorTabView(QuestionRepository questionRepository) {
         this.questionRepository = questionRepository;
