@@ -31,7 +31,7 @@ public class EditorTabView extends BorderPane {
         this.questionRepository = questionRepository;
         setPadding(new Insets(18));
 
-        Label title = new Label("Kérdésszerkesztő (Hozzáadás, Módosítás és Törlés)");
+        Label title = new Label("Kérdésszerkesztő");
         title.setFont(Font.font("System", FontWeight.BOLD, 20));
         title.setStyle("-fx-text-fill: #f5af19;");
         BorderPane.setMargin(title, new Insets(0, 0, 12, 0));
@@ -48,7 +48,7 @@ public class EditorTabView extends BorderPane {
         leftBox.setPrefWidth(320);
         leftBox.setPadding(new Insets(0, 15, 0, 0));
 
-        Label listHeader = new Label("Meglévő kérdések (Kattints a szerkesztéshez):");
+        Label listHeader = new Label("Meglévő kérdések:");
         listHeader.setStyle("-fx-text-fill: #b0c4de; -fx-font-weight: bold;");
 
         questionListView.setCellFactory(lv -> new ListCell<>() {
