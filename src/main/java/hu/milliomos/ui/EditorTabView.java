@@ -9,11 +9,23 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.scene.text.TextAlignment;
+import javafx.stage.StageStyle;
 
 import java.util.Arrays;
 import java.util.List;
 
 public class EditorTabView extends BorderPane {
+    private static final String[] DIFFICULTY_LABELS = {
+            "1. szint (5 000 – 10 000 Ft)",
+            "2. szint (25 000 – 50 000 Ft)",
+            "3. szint (100 000 – 200 000 Ft)",
+            "4. szint (300 000 – 500 000 Ft)",
+            "5. szint (800 000 – 1 500 000 Ft)",
+            "6. szint (3 000 000 – 5 000 000 Ft)",
+            "7. szint (10 000 000 – 40 000 000 Ft)"
+    };
+
     private final QuestionRepository questionRepository;
     private final ListView<Question> questionListView = new ListView<>();
 
@@ -22,6 +34,7 @@ public class EditorTabView extends BorderPane {
     @SuppressWarnings("unchecked")
     private final Spinner<Integer>[] probSpinners = new Spinner[4];
     private final ComboBox<String> correctCombo = new ComboBox<>();
+    private final ComboBox<String> difficultyCombo = new ComboBox<>();
     private final TextField tipField = new TextField();
 
     private final Button updateBtn = new Button("✏ Kijelölt módosítása");
@@ -31,7 +44,7 @@ public class EditorTabView extends BorderPane {
         this.questionRepository = questionRepository;
         setPadding(new Insets(18));
 
-        Label title = new Label("Kérdésszerkesztő");
+        Label title = new Label("Kérdésszerkesztő (7 nehézségi szint)");
         title.setFont(Font.font("System", FontWeight.BOLD, 20));
         title.setStyle("-fx-text-fill: #f5af19;");
         BorderPane.setMargin(title, new Insets(0, 0, 12, 0));
@@ -45,7 +58,7 @@ public class EditorTabView extends BorderPane {
 
     private VBox buildQuestionListPane() {
         VBox leftBox = new VBox(10);
-        leftBox.setPrefWidth(320);
+        leftBox.setPrefWidth(340);
         leftBox.setPadding(new Insets(0, 15, 0, 0));
 
         Label listHeader = new Label("Meglévő kérdések:");
@@ -58,7 +71,8 @@ public class EditorTabView extends BorderPane {
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    setText((getIndex() + 1) + ". " + item.getQuestionText());
+                    setText(String.format("%d. [Szint: %d] %s",
+                            getIndex() + 1, item.getDifficulty(), item.getQuestionText()));
                 }
             }
         });
@@ -119,10 +133,16 @@ public class EditorTabView extends BorderPane {
         correctCombo.getItems().addAll("0 (A válasz)", "1 (B válasz)", "2 (C válasz)", "3 (D válasz)");
         correctCombo.getSelectionModel().selectFirst();
 
+        difficultyCombo.getItems().addAll(DIFFICULTY_LABELS);
+        difficultyCombo.getSelectionModel().selectFirst();
+
         tipField.setPromptText("Rövid szöveges segítség a játékosnak...");
 
         form.add(new Label("Helyes válasz:"), 0, 5);
         form.add(correctCombo, 1, 5);
+        form.add(new Label("Nehézségi szint:"), 2, 5);
+        form.add(difficultyCombo, 3, 5);
+
         form.add(new Label("Kisebb tipp:"), 0, 6);
         form.add(tipField, 1, 6, 3, 1);
 
@@ -153,6 +173,9 @@ public class EditorTabView extends BorderPane {
         tipField.setText(q.getTip());
         correctCombo.getSelectionModel().select(q.getCorrectOptionIndex());
 
+        int diffIdx = Math.max(0, Math.min(DIFFICULTY_LABELS.length - 1, q.getDifficulty() - 1));
+        difficultyCombo.getSelectionModel().select(diffIdx);
+
         for (int i = 0; i < 4; i++) {
             optionFields[i].setText(q.getOptions().get(i));
             probSpinners[i].getValueFactory().setValue(q.getProbabilities().get(i));
@@ -178,7 +201,8 @@ public class EditorTabView extends BorderPane {
         }
 
         int correctIdx = correctCombo.getSelectionModel().getSelectedIndex();
-        return new Question(qText, opts, correctIdx, tipText, probs);
+        int difficulty = Math.max(1, difficultyCombo.getSelectionModel().getSelectedIndex() + 1);
+        return new Question(qText, opts, correctIdx, tipText, probs, difficulty);
     }
 
     private void handleSaveNew() {
@@ -236,13 +260,42 @@ public class EditorTabView extends BorderPane {
         probSpinners[2].getValueFactory().setValue(20);
         probSpinners[3].getValueFactory().setValue(15);
         correctCombo.getSelectionModel().selectFirst();
+        difficultyCombo.getSelectionModel().selectFirst();
     }
 
     private void showAlert(Alert.AlertType type, String title, String msg) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(msg);
+        Alert alert = new Alert(Alert.AlertType.NONE);
+        alert.initStyle(StageStyle.UNDECORATED);
+        if (getScene() != null && getScene().getWindow() != null) {
+            alert.initOwner(getScene().getWindow());
+        }
+
+        DialogPane dialogPane = alert.getDialogPane();
+        dialogPane.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        dialogPane.getStyleClass().add("studio-dialog");
+        dialogPane.setPrefWidth(420);
+
+        Label titleLabel = new Label(title.toUpperCase());
+        titleLabel.getStyleClass().add("studio-dialog-title");
+
+        Label contentLabel = new Label(msg);
+        contentLabel.getStyleClass().add("studio-dialog-message");
+        contentLabel.setWrapText(true);
+        contentLabel.setTextAlignment(TextAlignment.CENTER);
+        contentLabel.setAlignment(Pos.CENTER);
+        contentLabel.setMaxWidth(370);
+
+        VBox box = new VBox(14, titleLabel, contentLabel);
+        box.setAlignment(Pos.CENTER);
+        dialogPane.setContent(box);
+
+        ButtonType okType = new ButtonType("♦ Rendben", ButtonBar.ButtonData.OK_DONE);
+        dialogPane.getButtonTypes().add(okType);
+
+        Button okBtn = (Button) dialogPane.lookupButton(okType);
+        okBtn.getStyleClass().add("answer-button");
+        okBtn.setPrefSize(210, 44);
+
         alert.showAndWait();
     }
 }

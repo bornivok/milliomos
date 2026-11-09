@@ -40,3 +40,7 @@ build/
 
 ### App specific ###
 scores.json
+repomix-output*.xml
+nul
+dependency-reduced-pom.xml
+dist/

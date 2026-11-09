@@ -5,6 +5,7 @@ import hu.milliomos.model.ScoreRecord;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class GameEngineService {
@@ -33,7 +34,7 @@ public class GameEngineService {
     }
 
     public boolean startNewGame(String playerName, List<Question> allQuestions) {
-        if (allQuestions.size() < MAX_QUESTIONS) {
+        if (allQuestions == null || allQuestions.size() < MAX_QUESTIONS) {
             return false;
         }
         this.currentPlayerName = playerName;
@@ -44,21 +45,54 @@ public class GameEngineService {
         this.probabilitiesUsed = false;
         this.halvingUsed = false;
 
-        // 15 véletlenszerű kérdés kiválasztása
-        List<Question> shuffledPool = new ArrayList<>(allQuestions);
-        Collections.shuffle(shuffledPool);
+        // 15 kérdés kiválasztása a 7 nehézségi szint szerinti súlyozással
+        List<Question> weightedSelection = selectQuestionsBySevenLevels(allQuestions);
 
         // Minden kérdésnél a 4 válaszlehetőség sorrendjének véletlenszerű megkeverése
         this.activeQuestions = new ArrayList<>(MAX_QUESTIONS);
-        for (int i = 0; i < MAX_QUESTIONS; i++) {
-            this.activeQuestions.add(shuffleQuestionOptions(shuffledPool.get(i)));
+        for (Question q : weightedSelection) {
+            this.activeQuestions.add(shuffleQuestionOptions(q));
         }
         return true;
     }
 
     /**
+     * A 15 kérdéses játékmenethez a 7 nehézségi szint alapján választ kérdéseket:
+     * 1-2. kérdés -> 1. szint, 3-4. -> 2. szint, 5-6. -> 3. szint,
+     * 7-8. -> 4. szint, 9-10. -> 5. szint, 11-12. -> 6. szint, 13-15. -> 7. szint.
+     */
+    private List<Question> selectQuestionsBySevenLevels(List<Question> allQuestions) {
+        List<Question> pool = new ArrayList<>(allQuestions);
+        Collections.shuffle(pool);
+
+        List<Question> chosen = new ArrayList<>(MAX_QUESTIONS);
+
+        for (int qIdx = 0; qIdx < MAX_QUESTIONS; qIdx++) {
+            int requiredDiff = Math.min(Question.MAX_DIFFICULTY, (qIdx / 2) + 1);
+
+            Question match = null;
+            for (Question q : pool) {
+                if (q.getDifficulty() == requiredDiff) {
+                    match = q;
+                    break;
+                }
+            }
+
+            if (match == null) {
+                match = pool.stream()
+                        .min(Comparator.comparingInt(q -> Math.abs(q.getDifficulty() - requiredDiff)))
+                        .orElse(pool.get(0));
+            }
+
+            pool.remove(match);
+            chosen.add(match);
+        }
+        return chosen;
+    }
+
+    /**
      * Véletlenszerűen megkeveri a 4 válaszlehetőség helyét, és megfelelően átigazítja
-     * a helyes válasz indexét és a közönség szavazati arányait.
+     * a helyes válasz indexét és a közönség szavazati arányait, megtartva a nehézségi szintet.
      */
     public static Question shuffleQuestionOptions(Question original) {
         if (original == null || original.getOptions() == null || original.getOptions().size() != 4) {
@@ -92,7 +126,8 @@ public class GameEngineService {
                 newOptions,
                 newCorrectIndex,
                 original.getTip(),
-                newProbs
+                newProbs,
+                original.getDifficulty()
         );
     }
 
