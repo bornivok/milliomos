@@ -17,7 +17,7 @@ Egy működőképes prototípus elkészítése, ahol a játékos kérdéseket ka
 UI layout (fő játékablak) - Bilincsi Barnabás
 Nyereményfa UI (pénzlétra) - Farkas Krisztina
 Adatmodell és kérdés betöltő - Gál Csaba
-Projektváz és build környezet - 
+Projektváz és build környezet - Kucsik Donát
 GameEngine és Játékállapot - 
 UI interakció és eseménykezelés - 
 
