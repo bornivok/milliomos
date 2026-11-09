@@ -21,18 +21,20 @@ public class GameEngineServiceTest {
     @BeforeEach
     void setUp() {
         gameEngine = new GameEngineService(new ScoreCalculator());
-        mockQuestions = createSampleQuestions(20);
+        mockQuestions = createSampleQuestions(28);
     }
 
     private List<Question> createSampleQuestions(int count) {
         List<Question> list = new ArrayList<>();
         for (int i = 0; i < count; i++) {
+            int difficulty = (i % 7) + 1;
             list.add(new Question(
                     "Teszt kérdés #" + (i + 1),
                     List.of("A", "B", "C", "D"),
                     1,
                     "Tipp szöveg",
-                    List.of(10, 70, 10, 10)
+                    List.of(10, 70, 10, 10),
+                    difficulty
             ));
         }
         return list;
@@ -57,11 +59,23 @@ public class GameEngineServiceTest {
     }
 
     @Test
+    @DisplayName("A 15 kérdés kiválasztása a 7 nehézségi szint szerint növekvő sorrendben történik")
+    void testQuestionsFollowSevenDifficultyLevels() {
+        gameEngine.startNewGame("Jatekos", mockQuestions);
+
+        for (int qIdx = 0; qIdx < 15; qIdx++) {
+            int expectedDiff = Math.min(7, (qIdx / 2) + 1);
+            Question current = gameEngine.getCurrentQuestion();
+            assertEquals(expectedDiff, current.getDifficulty());
+            gameEngine.submitAnswer(current.getCorrectOptionIndex());
+        }
+    }
+
+    @Test
     @DisplayName("Megálláskor megmarad az eddigi összeg, hibás válasznál visszaesik a garantált szintre")
     void testWalkAwayAndMilestoneDrop() {
         gameEngine.startNewGame("Jatekos", mockQuestions);
 
-        // 6 helyes válasz: 1.(5e), 2.(10e), 3.(25e), 4.(50e), 5.(100e), 6.(200e)
         for (int i = 0; i < 6; i++) {
             int correctIdx = gameEngine.getCurrentQuestion().getCorrectOptionIndex();
             assertTrue(gameEngine.submitAnswer(correctIdx));
@@ -69,7 +83,6 @@ public class GameEngineServiceTest {
         assertEquals(200_000, gameEngine.getAccumulatedAnswerPoints());
         assertTrue(gameEngine.canWalkAway());
 
-        // 7. kérdés elrontása -> visszaesik az 5. kérdés garantált 100 000 Ft-jára
         int wrongIdx = (gameEngine.getCurrentQuestion().getCorrectOptionIndex() + 1) % 4;
         assertFalse(gameEngine.submitAnswer(wrongIdx));
         assertEquals(100_000, gameEngine.getAccumulatedAnswerPoints());
@@ -115,20 +128,22 @@ public class GameEngineServiceTest {
     }
 
     @Test
-    @DisplayName("A válaszlehetőségek megkeverése megőrzi a helyes válasz szövegét és a valószínűségeket")
+    @DisplayName("A válaszlehetőségek megkeverése megőrzi a helyes válasz szövegét, a valószínűségeket és a nehézséget")
     void testQuestionOptionsShufflingPreservesCorrectAnswer() {
         Question orig = new Question(
                 "Mi Magyarország fővárosa?",
                 List.of("Berlin", "Párizs", "Róma", "Budapest"),
                 3,
                 "Duna partján fekszik",
-                List.of(5, 10, 15, 70)
+                List.of(5, 10, 15, 70),
+                4
         );
         Question shuffled = GameEngineService.shuffleQuestionOptions(orig);
         int correctIdx = shuffled.getCorrectOptionIndex();
 
         assertEquals("Budapest", shuffled.getOptions().get(correctIdx));
         assertEquals(70, shuffled.getProbabilities().get(correctIdx));
+        assertEquals(4, shuffled.getDifficulty());
         assertEquals(4, shuffled.getOptions().size());
         assertTrue(shuffled.getOptions().containsAll(orig.getOptions()));
     }
