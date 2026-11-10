@@ -263,12 +263,23 @@
 
 .ladder-step-milestone {
     -fx-background-color: #13274f;
-    -fx-border-color: #3b6aa0;
+    -fx-border-color: #5b91d1;
+    -fx-border-width: 2;
 }
 
 .ladder-step-milestone .ladder-text {
     -fx-text-fill: #ffffff;
     -fx-font-size: 12px;
+}
+.ladder-step-jackpot {
+    -fx-background-color: #1b2340;
+    -fx-border-color: #f5af19;
+    -fx-border-width: 2;
+}
+
+.ladder-step-jackpot .ladder-text {
+    -fx-text-fill: #f5af19;
+    -fx-font-weight: bold;
 }
 
 .ladder-step-passed {
@@ -283,8 +294,10 @@
 .ladder-step-current {
     -fx-background-color: #ffb300;
     -fx-border-color: #ffffff;
-    -fx-border-width: 1.5;
-    -fx-effect: null;
+    -fx-border-width: 2.5;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-effect: dropshadow(gaussian, #ffb300, 10, 0.4, 0, 0);
 }
 
 .ladder-step-current .ladder-text {

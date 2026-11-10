@@ -17,6 +17,7 @@ import javafx.scene.layout.VBox;
  */
 public class PrizeLadderPane extends VBox {
     private final HBox[] stepRows = new HBox[GameEngineService.MAX_QUESTIONS];
+    private final Label[] stepMarkers = new Label[GameEngineService.MAX_QUESTIONS];
 
     public PrizeLadderPane(ScoreCalculator scoreCalculator) {
         setSpacing(3.5);
@@ -42,6 +43,15 @@ public class PrizeLadderPane extends VBox {
             if (isMilestone) {
                 row.getStyleClass().add("ladder-step-milestone");
             }
+            if (questionNum == 15) {
+                row.getStyleClass().add("ladder-step-jackpot");
+            }
+
+            Label markerLabel = new Label(" ");
+            markerLabel.setMinWidth(12);
+            markerLabel.setPrefWidth(12);
+            markerLabel.setStyle("-fx-text-fill: #ffffff; -fx-font-size: 11px; -fx-font-weight: bold;");
+            stepMarkers[i] = markerLabel;
 
             Label numLabel = new Label(String.format("%2d.", questionNum));
             numLabel.getStyleClass().add("ladder-text");
@@ -57,7 +67,7 @@ public class PrizeLadderPane extends VBox {
             Label pointsLabel = new Label(ScoreCalculator.formatFt(reward));
             pointsLabel.getStyleClass().add("ladder-text");
 
-            row.getChildren().addAll(numLabel, diamondLabel, spacer, pointsLabel);
+            row.getChildren().addAll(markerLabel, numLabel, diamondLabel, spacer, pointsLabel);
             stepRows[i] = row;
             getChildren().add(row);
         }
@@ -65,14 +75,20 @@ public class PrizeLadderPane extends VBox {
 
     public void updateCurrentStep(int currentQuestionNumber) {
         int currentIndex = currentQuestionNumber - 1;
+
         for (int i = 0; i < GameEngineService.MAX_QUESTIONS; i++) {
             HBox row = stepRows[i];
+            Label marker = stepMarkers[i];
+
             row.getStyleClass().removeAll("ladder-step-current", "ladder-step-passed");
+
+            marker.setText(" ");
 
             if (i < currentIndex) {
                 row.getStyleClass().add("ladder-step-passed");
             } else if (i == currentIndex) {
                 row.getStyleClass().add("ladder-step-current");
+                marker.setText("▶");
             }
         }
     }
