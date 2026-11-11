@@ -18,19 +18,31 @@ public class GameTimerService {
     private Timeline totalStopwatchTimeline;
     private long gameStartTimeMs = 0;
 
+    private final SoundEffectService soundEffectService =
+            new SoundEffectService();
+
     public void startQuestionTimer(Runnable onTimeExpired) {
         stopQuestionTimer();
+
         remainingSeconds.set(QUESTION_TIME_SECONDS);
+
         questionTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
             int current = remainingSeconds.get() - 1;
             remainingSeconds.set(current);
+
+            if (current == 5) {
+                soundEffectService.playAcceleratingTick();
+            }
+
             if (current <= 0) {
                 stopQuestionTimer();
+
                 if (onTimeExpired != null) {
                     onTimeExpired.run();
                 }
             }
         }));
+
         questionTimeline.setCycleCount(Timeline.INDEFINITE);
         questionTimeline.play();
     }

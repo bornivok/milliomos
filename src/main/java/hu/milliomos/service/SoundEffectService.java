@@ -44,6 +44,54 @@ public class SoundEffectService {
         playSequence(new int[]{523, 659, 784, 1046}, new int[]{140, 140, 140, 450}, 0.65);
     }
 
+    public void playAcceleratingTick() {
+        if (muted) return;
+
+        soundExecutor.submit(() -> {
+            AudioFormat format =
+                    new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
+
+            try (SourceDataLine line =
+                         AudioSystem.getSourceDataLine(format)) {
+
+                line.open(format);
+                line.start();
+
+                int frequency = 880;
+
+                // Kezdő és minimális szünet a pittyegések között
+                int delay = 500;
+                int minDelay = 70;
+
+                // Hány pittyegés történjen
+                int ticks = 12;
+
+                for (int i = 0; i < ticks; i++) {
+
+                    byte[] tone = synthesizeTone(frequency, 45, 0.35);
+
+                    line.write(tone, 0, tone.length);
+
+                    // Egyre rövidebb szünetek
+                    try {
+                        Thread.sleep(delay);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+
+                    // Gyorsítás
+                    delay = Math.max(minDelay, delay - 35);
+                }
+
+                line.drain();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
     public boolean isMuted() {
         return muted;
     }

@@ -1,60 +1,46 @@
-\# Sprint 1 — Értékelés és Demó (Review)
+# Sprint 2 - Értékelés és Demó (Review)
 
 
 
-\- \*\*Dátum:\*\* 2026. október 24
+- **Dátum:** 2026. november 12
 
-\- \*\*Jelenlévők:\*\* Minden csapattag jelen volt.
-
-
-
-\---
+- **Jelenlévők:** Minden csapattag jelen volt.
 
 
 
-\## 1. Sprint Goal státusz
-
-\- \*\*Eredmény:\*\* Részben sikeres
-
-\- \*\*Megjegyzés:\*\* Az alap játékmenet elkészült és tesztelhető, a pénzlétra vizuális léptetése stabilan működik.
+---
 
 
 
-\---
+## 1. Sprint Goal státusz
+
+- **Eredmény:** Sikeres
+
+- **Megjegyzés:** Az alap játékmenet elkészült és tesztelhető, a pénzlétra vizuális léptetése stabilan működik.
 
 
 
-\## 2. Demózott funkciók (Elkészült elemek)
-
-\- \*\*Kérdésbetöltés:\*\* Helyi adatfájlból sikeresen betöltődik 5 nehézségi szinthez tartozó kérdés.
-
-\- \*\*Interaktív játékmenet:\*\* A játékos a 4 gomb egyikére kattintva válaszolhat, a rendszer kiértékeli a választ (zöld/piros visszajelzés).
-
-\- \*\*Szintlépés és kiesés:\*\* Helyes válasz esetén a nyereményfa lépteti a játékost; rossz válasznál a játék megáll.
+---
 
 
 
-\---
+## 2. Demózott funkciók (Elkészült elemek)
+
+- **Segítségek:**  A Felező, Közönség és Telefon segítségek beépítésre kerültek, és használatuk támogatja a játékost a válaszadás során.
+
+- **Hang- és hangeffekt modul:**  A játék hanghatásai és visszajelző hangjai bekerültek a programba.
+
+- **Főmenü**: Elkészült a főmenü, ahonnan a játék elindítható.
 
 
 
-\## 3. Nem befejezett feladatok \& Visszacsorgás
-
-\- \*\*Task #5 (UI finomhangolás):\*\* A válaszlefedés animációja és a késleltetett színváltás nem készült el teljesen időhiány miatt.
-
-\- \*\*Döntés:\*\* Az alapfunkció stabil, a hiányzó vizuális finomítást átmozgatjuk a Sprint 2 backlogjába (UI polishing).
+---
 
 
 
-\---
+## 3. Nem befejezett feladatok & Visszacsorgás
 
+- **Eredmény:** A tervezett funkciók elkészültek, jelentős befejezetlen feladat nem maradt.
 
-
-\## 4. Következő lépések (Sprint 2 fókusz)
-
-\- Segítségek beépítése (Felező, Közönség, Telefon).
-
-\- Hang- és hangeffekt modul implementálása.
-
-\- Főmenü, szabályzat és győzelmi/vereségi záróképernyő.
+- **Megjegyzés:** A végső tesztelés során előforduló kisebb megjelenítési és működési hibák javítása megtörtént. A projekt működőképes, végleges állapotba került.
 

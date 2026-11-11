@@ -1,4 +1,4 @@
-# Sprint 1 — Visszatekintés (Retrospective)
+# Sprint 1 - Visszatekintés (Retrospective)
 
 - **Időpont:** 2026. október 25
 - **Formátum:** Mi ment jól / Mi ment rosszul / Akcióterv

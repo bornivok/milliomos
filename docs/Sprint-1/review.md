@@ -1,4 +1,4 @@
-# Sprint 1 — Értékelés és Demó (Review)
+# Sprint 1 - Értékelés és Demó (Review)
 
 - **Dátum:** 2026. október 24
 - **Jelenlévők:** Minden csapattag jelen volt.

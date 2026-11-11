@@ -15,11 +15,16 @@ Egy működőképes prototípus elkészítése, ahol a játékos kérdéseket ka
 ## 2. Elvállalt feladatok (Sprint Backlog)
 
 UI layout (fő játékablak) - Bilincsi Barnabás
+
 Nyereményfa UI (pénzlétra) - Farkas Krisztina
+
 Adatmodell és kérdés betöltő - Gál Csaba
+
 Projektváz és build környezet - Kucsik Donát
-GameEngine és Játékállapot - 
-UI interakció és eseménykezelés - 
+
+GameEngine és Játékállapot - Lőrincz Krisztián
+
+UI interakció és eseménykezelés - Zsoldos Csenge Adél
 
 **Összesített kapacitás:** 24 Story Point
 
