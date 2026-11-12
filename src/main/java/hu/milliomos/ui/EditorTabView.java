@@ -44,7 +44,7 @@ public class EditorTabView extends BorderPane {
         this.questionRepository = questionRepository;
         setPadding(new Insets(18));
 
-        Label title = new Label("Kérdésszerkesztő (7 nehézségi szint)");
+        Label title = new Label("Kérdésszerkesztő");
         title.setFont(Font.font("System", FontWeight.BOLD, 20));
         title.setStyle("-fx-text-fill: #f5af19;");
         BorderPane.setMargin(title, new Insets(0, 0, 12, 0));
