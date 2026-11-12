@@ -10,6 +10,16 @@ public class SoundEffectService {
     private static final float SAMPLE_RATE = 44100f;
     private boolean muted = false;
 
+    private volatile double masterVolume = 1.0;
+
+    public double getMasterVolume() {
+        return masterVolume;
+    }
+
+    public void setMasterVolume(double volume) {
+        masterVolume = Math.max(0.0, Math.min(1.0, volume));
+    }
+
     private final ExecutorService soundExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "studio-sound-thread");
         t.setDaemon(true);
@@ -134,7 +144,8 @@ public class SoundEffectService {
                 envelope = (double) (totalSamples - i) / fadeSamples;
             }
 
-            short sample = (short) (wave * envelope * volume * Short.MAX_VALUE);
+            short sample = (short) (wave * envelope * volume
+                    * (muted ? 0.0 : masterVolume) * Short.MAX_VALUE);
             buffer[2 * i] = (byte) (sample & 0xFF);
             buffer[2 * i + 1] = (byte) ((sample >> 8) & 0xFF);
         }

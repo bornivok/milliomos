@@ -17,6 +17,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.Slider;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
@@ -61,10 +63,22 @@ public class MainApp extends Application {
             topMuteBtn.setText(newMuted ? "🔇" : "🔊");
         });
 
+        Slider volumeSlider = new Slider(0, 100, 100);
+        volumeSlider.setPrefWidth(120);
+        volumeSlider.setTooltip(new Tooltip("Hangerő szabályozása"));
+
+        volumeSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+            soundService.setMasterVolume(newValue.doubleValue() / 100.0);
+        });
+
+        HBox soundControls = new HBox(10, volumeSlider, topMuteBtn);
+        soundControls.setAlignment(Pos.CENTER_RIGHT);
+        soundControls.setMaxSize(200, 35);
+
         StackPane root = new StackPane();
-        root.getChildren().addAll(tabPane, topMuteBtn);
-        StackPane.setAlignment(topMuteBtn, Pos.TOP_RIGHT);
-        StackPane.setMargin(topMuteBtn, new Insets(5, 14, 0, 0));
+        root.getChildren().addAll(tabPane, soundControls);
+        StackPane.setAlignment(soundControls, Pos.TOP_RIGHT);
+        StackPane.setMargin(soundControls, new Insets(5, 14, 0, 0));
 
         Scene scene = new Scene(root, 960, 650);
         scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
